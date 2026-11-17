@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Introduce yourself to the Mutuals campus community.">
+  <title>About you | Mutuals™</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/signup-details.css">
+</head>
+<body>
+  <main class="details-page">
+    <header class="topbar">
+      <a class="brand" href="../index.html">Mutuals<span>™</span></a>
+      <p>Already have an account? <a href="login.html">Log in</a></p>
+    </header>
+
+    <section class="details-layout">
+      <aside class="intro-panel">
+        <p class="eyebrow">A LITTLE INTRODUCTION</p>
+        <h1>First, let's<br><em>meet you.</em></h1>
+        <p class="intro-copy">
+          Every connection starts somewhere. Tell us a little about
+          yourself so your campus community can get to know you.
+        </p>
+
+        <div class="quote-card">
+          <span class="quote-star">✳</span>
+          <p>Come as you are. There's a place for you here.</p>
+          <span class="quote-signature">— The Mutuals community</span>
+        </div>
+
+        <p class="aside-footer">YOUR CAMPUS. YOUR PEOPLE.</p>
+        <span class="decor-star">✦</span>
+      </aside>
+
+      <section class="form-panel">
+        <div class="form-wrap">
+          <div class="step-heading">
+            <span>YOUR PROFILE</span>
+            <span>02 / 03</span>
+          </div>
+          <div class="progress-track"><span></span></div>
+
+          <div class="heading">
+            <p class="eyebrow">LET'S GET TO KNOW YOU</p>
+            <h2>About you.</h2>
+            <p>Fill in your details below. You can build the rest of your profile next.</p>
+          </div>
+
+          <form id="details-form">
+            <div class="field">
+              <label for="full-name">Full name</label>
+              <input id="full-name" name="fullName" type="text"
+                placeholder="Enter your full name" autocomplete="name" required>
+              <small>Your full name is for your account. Your nickname is what people see.</small>
+            </div>
+
+            <div class="field">
+              <label for="nickname">Nickname <span class="required">*</span></label>
+              <input id="nickname" name="nickname" type="text"
+                placeholder="What should people call you?" maxlength="30" required>
+            </div>
+
+            <div class="field">
+              <label for="age">Age</label>
+              <input id="age" name="age" type="number" min="13" max="99"
+                placeholder="Enter your age" inputmode="numeric" required>
+            </div>
+
+
+            <div class="field">
+              <label for="gender">Gender <span class="field-tag">Optional</span></label>
+              <select id="gender" name="gender">
+                <option value="" selected>Select your gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non-binary">Non-binary</option>
+                <option value="self-describe">Prefer to self-describe</option>
+                <option value="prefer-not-to-say">Prefer not to say</option>
+              </select>
+            </div>
+              <div class="field">
+              <label for="hall">Hall of residence</label>
+              <input id="hall" name="hall" type="text"
+                placeholder="e.g. Your hall of residence" required>
+            </div>
+
+            <div class="field">
+              <label for="department">Department</label>
+              <input id="department" name="department" type="text"
+                placeholder="e.g. Computer Science" required>
+            </div>
+
+            <div class="field">
+              <label for="level">Academic level</label>
+              <select id="level" name="level" required>
+                <option value="" disabled selected>Select your level</option>
+                <option value="100">100 Level</option>
+                <option value="200">200 Level</option>
+                <option value="300">300 Level</option>
+                <option value="400">400 Level</option>
+                <option value="500">500 Level</option>
+                <option value="600">600 Level</option>
+                <option value="700">700 Level</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <p id="form-message" class="form-message" role="status" aria-live="polite"></p>
+
+            <div class="form-actions">
+              <a class="back-button" href="signup.html">← Back</a>
+              <button class="continue-button" type="submit">
+                Continue <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </form>
+
+          <p class="privacy-note">
+            Your information should be treated with care. Only details
+            identified as public will appear on your profile.
+          </p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const detailsForm = document.getElementById('details-form');
+    const detailsMessage = document.getElementById('form-message');
+
+    detailsForm.addEventListener('submit', event => {
+      event.preventDefault();
+
+      const age = Number(document.getElementById('age').value);
+
+      if (!Number.isInteger(age) || age < 13 || age > 99) {
+        detailsMessage.textContent = 'Please enter a valid age.';
+        detailsMessage.className = 'form-message error';
+        return;
+      }
+
+      detailsMessage.textContent =
+        'Your details look good. Profile saving and the next stage will be connected with the relevant developers.';
+      detailsMessage.className = 'form-message success';
+    });
+  </script>
+</body>
+</html>

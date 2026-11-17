@@ -1,0 +1,130 @@
+@media (max-width: 850px) {
+  .navbar {
+    min-height: 78px;
+  }
+
+  .nav-links {
+    gap: 18px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .hero h1 {
+    font-size: clamp(55px, 8vw, 75px);
+  }
+
+  .hero-visual {
+    height: 430px;
+  }
+
+  .hero-benefits {
+    gap: 15px;
+  }
+
+  .steps-section {
+    grid-template-columns: 1fr;
+  }
+
+  .community-section {
+    gap: 30px;
+  }
+}
+
+@media (max-width: 600px) {
+  .navbar {
+    width: 90%;
+  }
+
+  .brand {
+    font-size: 25px;
+  }
+
+  .brand-mark {
+    font-size: 37px;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .nav-links,
+  .nav-actions {
+    display: none;
+  }
+
+  .nav-links.open {
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    padding: 22px;
+    background: var(--white);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    box-shadow: 0 12px 30px #37180f15;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    padding-top: 30px;
+    gap: 10px;
+  }
+
+  .hero h1 {
+    font-size: clamp(65px, 17vw, 88px);
+  }
+
+  .hero-description {
+    font-size: 16px;
+  }
+
+  .hero-visual {
+    height: 390px;
+    margin-top: 5px;
+  }
+
+  .photo-frame {
+    height: 95%;
+  }
+
+  .hero-benefits {
+    gap: 15px;
+  }
+
+  .hero-benefits > div {
+    font-size: 11px;
+  }
+
+  .steps-section {
+    padding: 40px 25px;
+    margin-bottom: 65px;
+  }
+
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 35px;
+  }
+
+  .step-icon {
+    margin: 10px auto;
+  }
+
+  .community-section {
+    grid-template-columns: 1fr;
+    margin-bottom: 65px;
+  }
+
+  .community-visual {
+    min-height: 300px;
+  }
+
+  .footer {
+    flex-direction: column;
+    text-align: center;
+  }
+}

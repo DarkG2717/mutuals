@@ -1,0 +1,21 @@
+{
+  "name": "mutuals",
+  "version": "1.0.0",
+  "description": "MUTUALS – Student Social Matching Platform",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.0"
+  },
+  "devDependencies": {
+    "supabase": "^3.2.0"
+  }
+}
