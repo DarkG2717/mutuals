@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,28 +41,10 @@
         <div class="form-heading">
           <p class="eyebrow">WELCOME TO MUTUALS</p>
           <h2>Let's get you<br>connected.</h2>
-<<<<<<< HEAD
-          <p id="step-description">Create your account and find your people.</p>
-        </div>
-
-        <button class="google-button" type="button" id="google-signup-button">
-          <span class="google-icon">G</span>
-          Continue with Google
-        </button>
-
-        <div class="signup-divider"><span>OR</span></div>
-
-        <button class="email-toggle" type="button" id="email-toggle">
-          Continue with email <span aria-hidden="true">→</span>
-        </button>
-
-        <form id="email-signup-form" hidden>
-=======
           <p>Create your account to get started. It only takes a moment.</p>
         </div>
 
         <form id="signup-form">
->>>>>>> origin/main
           <div class="field">
             <label for="email">Email address</label>
             <input type="email" id="email" name="email"
@@ -75,21 +53,6 @@
 
           <div class="field">
             <label for="password">Create password</label>
-<<<<<<< HEAD
-            <input type="password" id="password" name="password"
-              placeholder="At least 8 characters"
-              autocomplete="new-password" minlength="8" required>
-          </div>
-
-          <button class="submit-button" type="submit" id="email-submit-button">
-            Create account <span aria-hidden="true">→</span>
-          </button>
-        </form>
-
-        <p class="form-message" id="form-message"
-          role="status" aria-live="polite"></p>
-
-=======
             <div class="password-wrap">
               <input type="password" id="password" name="password"
                 placeholder="At least 8 characters" autocomplete="new-password"
@@ -118,7 +81,6 @@
           </button>
         </form>
 
->>>>>>> origin/main
         <p class="login-prompt">
           Already have an account?
           <a href="login.html">Log in</a>
@@ -132,89 +94,6 @@
     </section>
   </main>
 
-<<<<<<< HEAD
-  <script type="module">
-    import {
-      signInWithGoogle,
-      registerWithEmail
-    } from "../assets/js/auth.js";
-
-    const googleButton = document.getElementById("google-signup-button");
-    const emailToggle = document.getElementById("email-toggle");
-    const emailForm = document.getElementById("email-signup-form");
-    const emailButton = document.getElementById("email-submit-button");
-    const message = document.getElementById("form-message");
-
-    function showMessage(text, type = "error") {
-      message.textContent = text;
-      message.className = `form-message ${type}`;
-    }
-
-    emailToggle.addEventListener("click", () => {
-      emailForm.hidden = !emailForm.hidden;
-      emailToggle.innerHTML = emailForm.hidden
-        ? 'Continue with email <span aria-hidden="true">→</span>'
-        : 'Hide email signup <span aria-hidden="true">↑</span>';
-
-      if (!emailForm.hidden) {
-        document.getElementById("email").focus();
-      }
-    });
-
-    googleButton.addEventListener("click", async () => {
-      try {
-        googleButton.disabled = true;
-        googleButton.textContent = "Connecting to Google...";
-        showMessage("");
-
-        await signInWithGoogle();
-      } catch (error) {
-        console.error(error);
-        showMessage(error.message || "Google signup failed. Please try again.");
-        googleButton.disabled = false;
-        googleButton.innerHTML =
-          '<span class="google-icon">G</span> Continue with Google';
-      }
-    });
-
-    emailForm.addEventListener("submit", async event => {
-      event.preventDefault();
-
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-
-      if (password.length < 8) {
-        showMessage("Your password must contain at least 8 characters.");
-        return;
-      }
-
-      try {
-        emailButton.disabled = true;
-        emailButton.textContent = "Creating account...";
-        showMessage("");
-
-        const { session } = await registerWithEmail(email, password);
-
-        if (session) {
-          window.location.href = "signup-details.html";
-          return;
-        }
-
-        emailForm.hidden = true;
-        emailToggle.hidden = true;
-        googleButton.hidden = true;
-
-        showMessage(
-          "Account created! Check your inbox for the verification link. You can continue after verifying your email.",
-          "success"
-        );
-      } catch (error) {
-        console.error(error);
-        showMessage(error.message || "Unable to create your account.");
-        emailButton.disabled = false;
-        emailButton.innerHTML = 'Create account <span aria-hidden="true">→</span>';
-      }
-=======
   <script>
     const form = document.getElementById('signup-form');
     const message = document.getElementById('form-message');
@@ -251,7 +130,6 @@
 
       message.textContent = 'The form looks good. Account creation will be connected by the authentication developer.';
       message.className = 'form-message success';
->>>>>>> origin/main
     });
   </script>
 </body>
