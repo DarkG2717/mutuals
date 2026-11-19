@@ -1,3 +1,4 @@
+
 :root {
   --cream: #fff0dc;
   --paper: #fffaf3;
@@ -326,66 +327,7 @@ body {
   line-height: 1.7;
 }
 
-@media (max-width: 800px) {
-  .signup-page {
-    grid-template-columns: 1fr;
-  }
-
-  .signup-story {
-    min-height: auto;
-    padding: 25px 8% 35px;
-  }
-
-  .story-content {
-    margin: 55px 0 20px;
-  }
-
-  .story-content h1 {
-    font-size: clamp(42px, 9vw, 58px);
-  }
-
-  .story-footer {
-    margin-top: 15px;
-  }
-
-  .decor-one {
-    top: 22%;
-    right: 9%;
-    font-size: 48px;
-  }
-
-  .decor-two {
-    display: none;
-  }
-
-  .signup-panel {
-    padding: 48px 8%;
-  }
-
-  .form-heading {
-    margin-top: 32px;
-  }
-}
-
-@media (max-width: 420px) {
-  .signup-story {
-    padding: 22px 7% 30px;
-  }
-
-  .brand {
-    font-size: 27px;
-  }
-
-  .signup-panel {
-    padding: 38px 7%;
-  }
-
-  .form-heading h2 {
-    font-size: 39px;
-  }
-}
-<<<<<<< HEAD
-
+/* Google and alternative signup buttons */
 
 .google-button,
 .email-toggle {
@@ -455,5 +397,64 @@ body {
 .google-button[hidden] {
   display: none;
 }
-=======
->>>>>>> origin/main
+
+/* Tablet and mobile responsiveness */
+
+@media (max-width: 800px) {
+  .signup-page {
+    grid-template-columns: 1fr;
+  }
+
+  .signup-story {
+    min-height: auto;
+    padding: 25px 8% 35px;
+  }
+
+  .story-content {
+    margin: 55px 0 20px;
+  }
+
+  .story-content h1 {
+    font-size: clamp(42px, 9vw, 58px);
+  }
+
+  .story-footer {
+    margin-top: 15px;
+  }
+
+  .decor-one {
+    top: 22%;
+    right: 9%;
+    font-size: 48px;
+  }
+
+  .decor-two {
+    display: none;
+  }
+
+  .signup-panel {
+    padding: 48px 8%;
+  }
+
+  .form-heading {
+    margin-top: 32px;
+  }
+}
+
+@media (max-width: 420px) {
+  .signup-story {
+    padding: 22px 7% 30px;
+  }
+
+  .brand {
+    font-size: 27px;
+  }
+
+  .signup-panel {
+    padding: 38px 7%;
+  }
+
+  .form-heading h2 {
+    font-size: 39px;
+  }
+}
