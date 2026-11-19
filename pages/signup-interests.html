@@ -108,91 +108,38 @@
     </section>
   </main>
 
-  <script>
-    const interests = [
-      { name: "Gaming", icon: "🎮" },
-      { name: "Watching movies", icon: "🎬" },
-      { name: "Watching series", icon: "📺" },
-      { name: "Anime", icon: "🌸" },
-      { name: "Listening to music", icon: "🎧" },
-      { name: "Afrobeats", icon: "🥁" },
-      { name: "Gospel music", icon: "🎶" },
-      { name: "K-dramas", icon: "🍿" },
-      { name: "Podcasts", icon: "🎙️" },
-      { name: "Comedy", icon: "😂" },
-
-      { name: "Singing", icon: "🎤" },
-      { name: "Dancing", icon: "💃" },
-      { name: "Writing", icon: "✍️" },
-      { name: "Poetry", icon: "📝" },
-      { name: "Drawing", icon: "✏️" },
-      { name: "Painting", icon: "🎨" },
-      { name: "Photography", icon: "📸" },
-      { name: "Graphic design", icon: "🖌️" },
-      { name: "Content creation", icon: "📱" },
-      { name: "Fashion", icon: "👗" },
-
-      { name: "Football", icon: "⚽" },
-      { name: "Basketball", icon: "🏀" },
-      { name: "Volleyball", icon: "🏐" },
-      { name: "Chess", icon: "♟️" },
-      { name: "Table tennis", icon: "🏓" },
-      { name: "Badminton", icon: "🏸" },
-      { name: "Athletics", icon: "🏃" },
-      { name: "Swimming", icon: "🏊" },
-      { name: "Board games", icon: "🎲" },
-      { name: "Esports", icon: "🕹️" },
-
-      { name: "Eating", icon: "🍜" },
-      { name: "Cooking", icon: "🍳" },
-      { name: "Sleeping", icon: "😴" },
-      { name: "Travelling", icon: "✈️" },
-      { name: "Exploring new places", icon: "🧭" },
-      { name: "Shopping", icon: "🛍️" },
-      { name: "Fitness", icon: "🏋️" },
-      { name: "Reading", icon: "📚" },
-      { name: "Gardening", icon: "🌱" },
-      { name: "Trying new things", icon: "✨" },
-
-      { name: "Technology", icon: "💻" },
-      { name: "Programming", icon: "👩‍💻" },
-      { name: "Artificial intelligence", icon: "🤖" },
-      { name: "Entrepreneurship", icon: "🚀" },
-      { name: "Business", icon: "📈" },
-      { name: "Science", icon: "🔬" },
-      { name: "Public speaking", icon: "🎙️" },
-      { name: "Volunteering", icon: "🤝" },
-      { name: "Learning languages", icon: "🌍" },
-      { name: "Making new friends", icon: "🫶" }
-    ];
+  <script type="module">
+    import { supabase } from "../assets/js/supabase.js";
 
     const MINIMUM = 7;
 
-    // Restore only valid interests, and never restore more than 7.
-    let savedInterests = [];
-    try {
-      const stored = JSON.parse(
-        sessionStorage.getItem("mutualsSelectedInterests") || "[]"
-      );
-
-      if (Array.isArray(stored)) {
-        savedInterests = stored
-          .filter(name => interests.some(item => item.name === name))
-          .slice(0, MINIMUM);
-      }
-    } catch (error) {
-      savedInterests = [];
-    }
-
-    const selected = new Set(savedInterests);
-    sessionStorage.setItem(
-      "mutualsSelectedInterests",
-      JSON.stringify([...selected])
-    );
+    const ICONS = {
+      "Gaming": "🎮", "Watching movies": "🎬", "Watching series": "📺", "Anime": "🌸",
+      "Listening to music": "🎧", "Afrobeats": "🥁", "Gospel music": "🎶", "K-dramas": "🍿",
+      "Music": "🎵", "Singing": "🎤", "Movies": "🎬", "Photography": "📷",
+      "Football": "⚽", "Basketball": "🏀", "Fitness": "🏋️", "Cooking": "🍳",
+      "Reading": "📚", "Poetry": "✒️", "Dancing": "💃", "Technology": "💻",
+      "Programming": "🧑‍💻", "Artificial intelligence": "🤖", "Science": "🔬",
+      "Entrepreneurship": "🚀", "Business": "📈", "Public Speaking": "🎙️",
+      "Public speaking": "🎙️", "Volunteering": "🤝", "Languages": "🌍",
+      "Making new friends": "🫶", "Travel": "✈️", "Travelling": "✈️",
+      "Swimming": "🏊", "Shopping": "🛍️", "Gardening": "🌱", "Sleeping": "😴",
+      "Eating": "🍽️", "Podcasts": "🎙️", "Esports": "🕹️", "Board games": "🎲",
+      "Painting": "🎨", "Graphic Design": "🖌️", "Graphic design": "🖌️",
+      "Fashion": "👗", "Comedy": "😂", "Documentaries": "🎞️", "Law": "⚖️",
+      "Medicine and Health": "🩺", "Engineering": "⚙️", "Academic Research": "📖",
+      "Student Leadership": "🏅", "Cultural Events": "🎭", "Environmental Awareness": "♻️",
+      "Equality and Inclusion": "🤲", "Religion and Spirituality": "🕊️",
+      "Food and Food Culture": "🍲", "Nature": "🌿", "Adventure": "🧭",
+      "Creative Writing": "✍️", "Writing": "✍️", "Content Creation": "📱",
+      "Content creation": "📱", "K-pop": "🎤", "Athletics": "🏃", "Badminton": "🏸",
+      "Table tennis": "🏓", "Volleyball": "🏐", "Trying new things": "✨",
+      "Exploring new places": "🗺️", "Drawing and Painting": "🖼️"
+    };
 
     const grid = document.getElementById("interestGrid");
     const selectedList = document.getElementById("selectedList");
-    const count = document.getElementById("selectedCount");
+    const countEl = document.getElementById("selectedCount");
     const search = document.getElementById("interestSearch");
     const noResults = document.getElementById("noResults");
     const continueButton = document.getElementById("continueButton");
@@ -200,17 +147,21 @@
     const progressFill = document.getElementById("progressFill");
     const progressText = document.getElementById("progressText");
     const completionMessage = document.getElementById("completionMessage");
+    const searchHint = document.querySelector(".search-hint");
+
+    let interests = [];
+    let viewerId = null;
+    const selected = new Map();
 
     function saveSelection() {
       sessionStorage.setItem(
         "mutualsSelectedInterests",
-        JSON.stringify([...selected])
+        JSON.stringify([...selected.values()])
       );
     }
 
     function renderInterests() {
       const query = search.value.trim().toLowerCase();
-
       const filtered = interests.filter(interest =>
         interest.name.toLowerCase().includes(query)
       );
@@ -218,13 +169,12 @@
       grid.innerHTML = "";
 
       filtered.forEach(interest => {
-        const isSelected = selected.has(interest.name);
+        const isSelected = selected.has(interest.id);
         const button = document.createElement("button");
 
         button.type = "button";
         button.className = "interest-card";
         button.classList.toggle("selected", isSelected);
-        button.disabled = !isSelected && selected.size >= MINIMUM;
         button.setAttribute("aria-pressed", String(isSelected));
 
         button.innerHTML = `
@@ -234,12 +184,10 @@
         `;
 
         button.addEventListener("click", () => {
-          if (selected.has(interest.name)) {
-            selected.delete(interest.name);
+          if (selected.has(interest.id)) {
+            selected.delete(interest.id);
           } else {
-            // Final guard: never allow an eighth selection.
-            if (selected.size >= MINIMUM) return;
-            selected.add(interest.name);
+            selected.set(interest.id, interest.name);
           }
 
           saveSelection();
@@ -251,16 +199,11 @@
       });
 
       noResults.hidden = filtered.length > 0;
-
-      if (typeof limitMessage !== "undefined") {
-        limitMessage.hidden = selected.size < MINIMUM;
-      }
     }
 
     function renderSelected() {
       const total = selected.size;
-      count.textContent = total;
-
+      countEl.textContent = total;
       selectedList.innerHTML = "";
 
       if (total === 0) {
@@ -268,7 +211,7 @@
           '<p class="empty-selection">Your chosen interests will appear here.</p>';
       } else {
         interests
-          .filter(interest => selected.has(interest.name))
+          .filter(interest => selected.has(interest.id))
           .forEach(interest => {
             const chip = document.createElement("button");
             chip.type = "button";
@@ -277,7 +220,7 @@
             chip.setAttribute("aria-label", `Remove ${interest.name}`);
 
             chip.addEventListener("click", () => {
-              selected.delete(interest.name);
+              selected.delete(interest.id);
               saveSelection();
               renderInterests();
               renderSelected();
@@ -287,7 +230,7 @@
           });
       }
 
-      const ready = total === MINIMUM;
+      const ready = total >= MINIMUM;
       continueButton.disabled = !ready;
 
       minimumStatus.textContent = ready
@@ -296,28 +239,109 @@
 
       minimumStatus.classList.toggle("complete", ready);
 
-      progressFill.style.width =
-        `${Math.min((total / MINIMUM) * 100, 100)}%`;
+      progressFill.style.width = `${Math.min((total / MINIMUM) * 100, 100)}%`;
 
       progressText.textContent = ready
         ? `${total} selected — you're ready`
         : `${total} of ${MINIMUM} minimum`;
     }
 
-    search.addEventListener("input", renderInterests);
+    async function saveAndContinue() {
+      if (selected.size < MINIMUM) return;
 
-    continueButton.addEventListener("click", () => {
-      if (selected.size !== MINIMUM) return;
-
+      continueButton.disabled = true;
       completionMessage.hidden = false;
-      completionMessage.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest"
-      });
-    });
+      completionMessage.textContent = "Saving your interests…";
 
-    renderInterests();
-    renderSelected();
+      try {
+        const { error: clearError } = await supabase
+          .from("user_interests")
+          .delete()
+          .eq("user_id", viewerId);
+
+        if (clearError) throw clearError;
+
+        const rows = [...selected.keys()].map(interestId => ({
+          user_id: viewerId,
+          interest_id: interestId
+        }));
+
+        const { error: insertError } = await supabase
+          .from("user_interests")
+          .insert(rows);
+
+        if (insertError) throw insertError;
+
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ onboarding_completed: true })
+          .eq("id", viewerId);
+
+        if (profileError) throw profileError;
+
+        sessionStorage.removeItem("mutualsSelectedInterests");
+        window.location.href = "discover.html";
+      } catch (error) {
+        completionMessage.textContent =
+          error.message || "Could not save your interests. Please try again.";
+        continueButton.disabled = false;
+      }
+    }
+
+    search.addEventListener("input", renderInterests);
+    continueButton.addEventListener("click", saveAndContinue);
+
+    async function boot() {
+      const { data } = await supabase.auth.getSession();
+      const user = data?.session?.user;
+
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      viewerId = user.id;
+
+      const { data: rows, error } = await supabase
+        .from("interests")
+        .select("id, name")
+        .order("name");
+
+      if (error) {
+        completionMessage.hidden = false;
+        completionMessage.textContent = error.message;
+        return;
+      }
+
+      interests = (rows || []).map(row => ({
+        id: row.id,
+        name: row.name,
+        icon: ICONS[row.name] || "✳"
+      }));
+
+      if (searchHint) {
+        searchHint.textContent = `${interests.length} interests`;
+      }
+
+      let stored = [];
+      try {
+        stored = JSON.parse(sessionStorage.getItem("mutualsSelectedInterests") || "[]");
+      } catch (error) {
+        stored = [];
+      }
+
+      if (Array.isArray(stored)) {
+        stored.forEach(name => {
+          const match = interests.find(interest => interest.name === name);
+          if (match) selected.set(match.id, match.name);
+        });
+      }
+
+      renderInterests();
+      renderSelected();
+    }
+
+    boot();
   </script>
 </body>
 </html>

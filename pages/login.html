@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Log in to Mutuals and pick up where you left off.">
+  <title>Log in | Mutuals™</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/signup.css">
+</head>
+<body>
+  <main class="signup-page">
+    <section class="signup-story">
+      <a class="brand" href="../index.html" aria-label="Mutuals home">Mutuals<span>™</span></a>
+
+      <div class="story-content">
+        <p class="eyebrow">YOUR CAMPUS. YOUR COMMUNITY.</p>
+        <h1>Good people.<br><em>Great connections.</em></h1>
+        <p class="story-copy">
+          Welcome back. Your people are still here — pick up right where you left off.
+        </p>
+        <div class="story-note">
+          <span class="note-mark">✳</span>
+          <span>A place to find your people and feel more connected.</span>
+        </div>
+      </div>
+
+      <p class="story-footer">Made for campus life. Made for connection.</p>
+      <span class="decor decor-one">✳</span>
+      <span class="decor decor-two">✦</span>
+    </section>
+
+    <section class="signup-panel">
+      <div class="form-wrap">
+        <div class="form-heading">
+          <p class="eyebrow">WELCOME BACK</p>
+          <h2>Good to see<br>you again.</h2>
+          <p>Log in to keep discovering students who share your interests.</p>
+        </div>
+
+        <form id="login-form">
+          <div class="field">
+            <label for="email">Email address</label>
+            <input type="email" id="email" name="email"
+              placeholder="you@example.com" autocomplete="email" required>
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+              <input type="password" id="password" name="password"
+                placeholder="Enter your password" autocomplete="current-password" required>
+              <button class="password-toggle" type="button"
+                data-target="password" aria-label="Show password">Show</button>
+            </div>
+          </div>
+
+          <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+
+          <button class="submit-button" type="submit">
+            Log in <span aria-hidden="true">→</span>
+          </button>
+        </form>
+
+        <p class="login-prompt">
+          New to Mutuals?
+          <a href="signup.html">Create an account</a>
+        </p>
+
+        <p class="terms-note">
+          By continuing, you agree to use Mutuals respectfully and help
+          keep our campus community welcoming.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { loginUser, getCurrentUser } from '../assets/js/auth.js';
+
+    const form = document.getElementById('login-form');
+    const message = document.getElementById('form-message');
+    const submitButton = form.querySelector('.submit-button');
+
+    document.querySelectorAll('.password-toggle').forEach(button => {
+      button.addEventListener('click', () => {
+        const input = document.getElementById(button.dataset.target);
+        const showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        button.textContent = showing ? 'Show' : 'Hide';
+        button.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      });
+    });
+
+    function showError(text) {
+      message.textContent = text;
+      message.className = 'form-message error';
+      submitButton.disabled = false;
+    }
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+
+      submitButton.disabled = true;
+      message.textContent = 'Signing you in…';
+      message.className = 'form-message';
+
+      try {
+        await loginUser(email, password);
+        window.location.href = 'discover.html';
+      } catch (error) {
+        const text = error.message || 'Could not log you in. Please try again.';
+        showError(text.toLowerCase().includes('invalid')
+          ? 'That email and password combination did not work.'
+          : text);
+      }
+    });
+
+    // Already signed in? Skip straight to the deck.
+    getCurrentUser()
+      .then(user => {
+        if (user) window.location.href = 'discover.html';
+      })
+      .catch(() => {
+        /* not signed in — stay on the page */
+      });
+  </script>
+</body>
+</html>

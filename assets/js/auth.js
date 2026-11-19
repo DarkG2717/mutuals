@@ -8,6 +8,20 @@ function requireSupabase() {
   return supabase;
 }
 
+// SIGNUP: Email and password (single step, no email round-trip).
+// Returns { user, session }. session is null when email confirmation is on.
+export async function signUpWithPassword(email, password) {
+  const client = requireSupabase();
+
+  const { data, error } = await client.auth.signUp({
+    email: email.trim().toLowerCase(),
+    password
+  });
+
+  if (error) throw error;
+  return data;
+}
+
 // STEP 1: Send email OTP during registration.
 export async function sendSignupOTP(email) {
   const client = requireSupabase();
@@ -120,4 +134,81 @@ export async function logoutUser() {
   const { error } = await client.auth.signOut();
 
   if (error) throw error;
+}
+
+// Alias used by the signup page script.
+export const registerWithEmail = signUpWithPassword;
+
+// GOOGLE OAUTH: redirects the browser to Google and back to the site.
+export async function signInWithGoogle(redirectTo) {
+  const client = requireSupabase();
+
+  const { data, error } = await client.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: redirectTo || window.location.origin + "/pages/signup-details.html"
+    }
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+// PROFILE: create or update the signed-in user's profile row.
+export async function saveUserProfile(profile = {}) {
+  const client = requireSupabase();
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("You need to be signed in to save your profile.");
+  }
+
+  const { age } = profile;
+  const birthYear =
+    Number.isInteger(age) && age > 0 ? new Date().getFullYear() - age : null;
+
+  const payload = {
+    id: user.id,
+    full_name: profile.full_name,
+    nickname: profile.nickname || null,
+    age: Number.isInteger(age) ? age : null,
+    birth_year: birthYear,
+    gender: profile.gender || null,
+    hall: profile.hall,
+    faculty: profile.faculty || null,
+    department: profile.department || null,
+    level: profile.level || null,
+    bio: profile.bio || undefined,
+    avatar_url: profile.avatar_url || undefined
+  };
+
+  Object.keys(payload).forEach(key => {
+    if (payload[key] === undefined) delete payload[key];
+  });
+
+  const { data, error } = await client
+    .from("profiles")
+    .upsert(payload, { onConflict: "id" })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// PROFILE: read the signed-in user's profile row (null when none yet).
+export async function getUserProfile() {
+  const client = requireSupabase();
+  const user = await getCurrentUser();
+
+  if (!user) return null;
+
+  const { data, error } = await client
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
 }

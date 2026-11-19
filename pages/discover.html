@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Discover students who share your interests on Mutuals.">
+  <title>Discover | Mutuals™</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/discover.css">
+</head>
+<body>
+  <header class="discover-bar">
+    <a class="brand" href="../index.html">Mutuals<span>™</span></a>
+    <div class="bar-actions">
+      <span id="viewerName"></span>
+      <button type="button" id="logoutButton">Log out</button>
+    </div>
+  </header>
+
+  <main class="discover-main">
+    <section class="deck" id="deck" aria-live="polite">
+      <p class="deck-status" id="deckStatus">Loading people near you…</p>
+
+      <article class="profile-card" id="profileCard" hidden>
+        <div class="card-visual">
+          <img class="card-photo" id="cardPhoto" alt="" hidden>
+          <span class="card-initials" id="cardInitials"></span>
+          <span class="match-badge" id="matchBadge"></span>
+        </div>
+
+        <div class="card-body">
+          <h1 class="card-name" id="cardName"></h1>
+          <p class="card-nickname" id="cardNickname"></p>
+
+          <div class="card-meta" id="cardMeta"></div>
+
+          <div class="card-interests" id="cardInterests"></div>
+        </div>
+      </article>
+
+      <div class="empty-state" id="emptyState" hidden>
+        <h2 id="emptyTitle">No one new right now</h2>
+        <p id="emptyCopy">
+          You've seen everyone available in your hall and faculty. Check back soon —
+          new students join every week.
+        </p>
+        <a href="signup-interests.html" id="emptyLink">Update your interests</a>
+      </div>
+
+      <div class="deck-actions" id="deckActions" hidden>
+        <button class="action-button pass" type="button" id="passButton">Pass</button>
+        <button class="action-button like" type="button" id="likeButton">Like</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="match-toast" id="matchToast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import { supabase, supabaseConfigured } from '../assets/js/supabase.js';
+    import {
+      buildInterestVectors,
+      buildIdfMap,
+      filterCandidates,
+      buildDeck
+    } from '../assets/js/matching.js';
+
+    const DECK_SIZE = 20;
+
+    const els = {
+      status: document.getElementById('deckStatus'),
+      card: document.getElementById('profileCard'),
+      photo: document.getElementById('cardPhoto'),
+      initials: document.getElementById('cardInitials'),
+      badge: document.getElementById('matchBadge'),
+      name: document.getElementById('cardName'),
+      nickname: document.getElementById('cardNickname'),
+      meta: document.getElementById('cardMeta'),
+      interests: document.getElementById('cardInterests'),
+      actions: document.getElementById('deckActions'),
+      pass: document.getElementById('passButton'),
+      like: document.getElementById('likeButton'),
+      empty: document.getElementById('emptyState'),
+      emptyTitle: document.getElementById('emptyTitle'),
+      emptyCopy: document.getElementById('emptyCopy'),
+      emptyLink: document.getElementById('emptyLink'),
+      toast: document.getElementById('matchToast'),
+      viewerName: document.getElementById('viewerName'),
+      logout: document.getElementById('logoutButton')
+    };
+
+    let deck = [];
+    let viewerId = null;
+    let viewerInterests = new Set();
+    let busy = false;
+
+    function setStatus(text) {
+      els.status.textContent = text || '';
+    }
+
+    function showEmpty(title, copy, linkLabel) {
+      els.card.hidden = true;
+      els.actions.hidden = true;
+      els.empty.hidden = false;
+      els.emptyTitle.textContent = title;
+      els.emptyCopy.textContent = copy;
+      if (linkLabel) {
+        els.emptyLink.textContent = linkLabel;
+        els.emptyLink.hidden = false;
+      } else {
+        els.emptyLink.hidden = true;
+      }
+    }
+
+    function toast(text) {
+      els.toast.textContent = text;
+      els.toast.classList.add('visible');
+      setTimeout(() => els.toast.classList.remove('visible'), 2600);
+    }
+
+    function initialsOf(name) {
+      return (name || '?')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part[0].toUpperCase())
+        .join('');
+    }
+
+    function render(card) {
+      const profile = card.profile;
+
+      els.empty.hidden = true;
+      els.card.hidden = false;
+      els.actions.hidden = false;
+
+      els.name.textContent = profile.full_name || 'Someone new';
+      els.nickname.textContent = profile.nickname ? `“${profile.nickname}”` : '';
+      els.nickname.hidden = !profile.nickname;
+
+      els.badge.textContent = `${card.percent}% match`;
+
+      if (profile.avatar_url) {
+        els.photo.src = profile.avatar_url;
+        els.photo.alt = `${profile.full_name || 'Student'} photo`;
+        els.photo.hidden = false;
+        els.initials.hidden = true;
+      } else {
+        els.photo.hidden = true;
+        els.initials.hidden = false;
+        els.initials.textContent = initialsOf(profile.full_name);
+      }
+
+      els.meta.innerHTML = '';
+      [profile.hall, profile.department, profile.level && `${profile.level} level`]
+        .filter(Boolean)
+        .forEach(value => {
+          const chip = document.createElement('span');
+          chip.className = 'meta-chip';
+          chip.textContent = value;
+          els.meta.appendChild(chip);
+        });
+
+      els.interests.innerHTML = '';
+      const shared = card.sharedInterests || [];
+      const caption = document.createElement('span');
+      caption.className = 'interests-caption';
+      caption.textContent = shared.length ? 'You both like' : 'Interests';
+      els.interests.appendChild(caption);
+
+      const list = shared.length ? shared : card.interests || [];
+      list.slice(0, 8).forEach(name => {
+        const pill = document.createElement('span');
+        pill.className = 'interest-pill';
+        pill.textContent = name;
+        els.interests.appendChild(pill);
+      });
+    }
+
+    function showNext() {
+      if (!deck.length) {
+        setStatus('');
+        showEmpty(
+          'No one new right now',
+          "You've seen everyone available in your hall and faculty. Check back soon — new students join every week.",
+          'Update your interests'
+        );
+        return;
+      }
+
+      const [next] = deck;
+      setStatus(`${deck.length} ${deck.length === 1 ? 'person' : 'people'} to meet`);
+      render(next);
+    }
+
+    async function loadDeck() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+
+      if (!user) {
+        setStatus('');
+        showEmpty(
+          'You need an account first',
+          'Log in to start discovering students who share your interests.',
+          'Create an account'
+        );
+        els.emptyLink.href = 'signup.html';
+        return;
+      }
+
+      viewerId = user.id;
+      els.viewerName.textContent = user.email || '';
+
+      const [profilesResult, poolResult, statsResult, swipesResult, blocksResult, ownResult] =
+        await Promise.all([
+          supabase.from('profiles').select(
+            'id, full_name, nickname, hall, department, level, avatar_url, onboarding_completed'
+          ),
+          supabase.rpc('get_interest_pool'),
+          supabase.from('interest_stats').select('idf, interests(name)'),
+          supabase.from('swipes').select('swiped_id, decision'),
+          supabase.from('blocks').select('blocker_id, blocked_id'),
+          supabase.from('user_interests').select('interest_id, interests(name)').eq('user_id', user.id)
+        ]);
+
+      const failure = [profilesResult, poolResult, statsResult, swipesResult, blocksResult, ownResult]
+        .find(result => result.error);
+
+      if (failure) {
+        setStatus('');
+        showEmpty('Something went wrong', failure.error.message, null);
+        return;
+      }
+
+      const pool = poolResult.data || [];
+
+      // The pool deliberately excludes the viewer, so their own interests
+      // are read straight from user_interests (RLS scopes it to them).
+      const ownRows = (ownResult.data || [])
+        .map(row => row.interests && row.interests.name)
+        .filter(Boolean)
+        .map(name => ({ user_id: viewerId, interest_name: name }));
+
+      viewerInterests = new Set(ownRows.map(row => row.interest_name));
+
+      if (!viewerInterests.size) {
+        setStatus('');
+        showEmpty(
+          'Pick your interests first',
+          'We match on shared interests, so choose at least a few before discovering people.',
+          'Choose interests'
+        );
+        els.emptyLink.href = 'signup-interests.html';
+        return;
+      }
+
+      const statRows = (statsResult.data || []).map(row => ({
+        interest_name: row.interests && row.interests.name,
+        idf: row.idf
+      }));
+
+      const idfMap = buildIdfMap(statRows);
+      const vectors = buildInterestVectors(pool.concat(ownRows), idfMap);
+      const candidates = filterCandidates(
+        viewerId,
+        profilesResult.data || [],
+        swipesResult.data || [],
+        blocksResult.data || []
+      );
+
+      const scored = buildDeck(viewerId, candidates, vectors, { size: DECK_SIZE });
+
+      deck = scored.map(card => {
+        const id = card.profile.id;
+        const theirs = pool
+          .filter(row => row.user_id === id)
+          .map(row => row.interest_name);
+        return {
+          ...card,
+          interests: theirs,
+          sharedInterests: theirs.filter(name => viewerInterests.has(name))
+        };
+      });
+
+      showNext();
+    }
+
+    async function decide(decision) {
+      if (busy || !deck.length) return;
+      busy = true;
+      els.pass.disabled = true;
+      els.like.disabled = true;
+
+      const card = deck[0];
+
+      const { error } = await supabase.from('swipes').insert({
+        swiper_id: viewerId,
+        swiped_id: card.profile.id,
+        decision
+      });
+
+      if (error) {
+        toast(error.message);
+        els.pass.disabled = false;
+        els.like.disabled = false;
+        busy = false;
+        return;
+      }
+
+      deck.shift();
+
+      if (decision === 'like') {
+        const { data: match } = await supabase
+          .from('matches')
+          .select('id')
+          .or(`user_one.eq.${card.profile.id},user_two.eq.${card.profile.id}`)
+          .maybeSingle();
+
+        if (match) {
+          toast(`It's a match with ${card.profile.full_name || 'someone'} ✳`);
+        }
+      }
+
+      showNext();
+      els.pass.disabled = false;
+      els.like.disabled = false;
+      busy = false;
+    }
+
+    els.pass.addEventListener('click', () => decide('pass'));
+    els.like.addEventListener('click', () => decide('like'));
+
+    els.logout.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = '../index.html';
+    });
+
+    if (!supabaseConfigured || !supabase) {
+      setStatus('');
+      showEmpty('Not configured', 'Supabase credentials are missing.', null);
+    } else {
+      loadDeck().catch(error => {
+        setStatus('');
+        showEmpty('Something went wrong', error.message, null);
+      });
+    }
+  </script>
+</body>
+</html>
