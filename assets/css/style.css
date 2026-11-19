@@ -1,0 +1,410 @@
+:root {
+  --cream: #fff0dc;
+  --cream-dark: #f8dfc3;
+  --orange: #bd3516;
+  --orange-light: #e9673e;
+  --brown: #37180f;
+  --muted: #795345;
+  --yellow: #f4ae42;
+  --white: #fffaf3;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--brown);
+  font-family: "DM Sans", sans-serif;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.navbar {
+  width: min(1380px, 90%);
+  margin: auto;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 5;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "Playfair Display", serif;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.brand-mark {
+  color: var(--orange);
+  font-family: "DM Sans", sans-serif;
+  font-size: 45px;
+  font-weight: 700;
+  line-height: 1;
+  transform: skew(-12deg);
+}
+
+.nav-links,
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 38px;
+  font-size: 14px;
+}
+
+.nav-links a {
+  transition: color .2s;
+}
+
+.nav-links a:hover {
+  color: var(--orange);
+}
+
+.nav-actions {
+  gap: 12px;
+}
+
+.login-button,
+.nav-join,
+.secondary-button,
+.primary-button {
+  border-radius: 40px;
+  padding: 13px 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 14px;
+  transition: transform .2s, background .2s;
+}
+
+.login-button,
+.secondary-button {
+  border: 1px solid var(--orange);
+}
+
+.nav-join,
+.primary-button {
+  background: var(--orange);
+  color: white;
+}
+
+.login-button:hover,
+.nav-join:hover,
+.primary-button:hover,
+.secondary-button:hover {
+  transform: translateY(-3px);
+}
+
+.menu-toggle {
+  display: none;
+  border: 0;
+  background: transparent;
+  font-size: 27px;
+  color: var(--brown);
+  cursor: pointer;
+}
+
+.hero {
+  width: min(1380px, 90%);
+  min-height: 620px;
+  margin: 0 auto;
+  padding: 55px 0 85px;
+  display: grid;
+  grid-template-columns: .92fr 1.08fr;
+  align-items: center;
+  gap: 25px;
+  position: relative;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 2;
+  padding: 15px 0 20px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 16px;
+  border: 1px solid var(--orange-light);
+  border-radius: 40px;
+  color: var(--brown);
+  font-size: 13px;
+  margin-bottom: 22px;
+}
+
+.eyebrow span {
+  color: var(--orange);
+  font-size: 18px;
+}
+
+h1,
+h2 {
+  font-family: "Playfair Display", serif;
+  font-weight: 700;
+  letter-spacing: -2.5px;
+}
+
+.hero h1 {
+  font-size: clamp(65px, 8vw, 112px);
+  line-height: .98;
+  max-width: 620px;
+}
+
+h1 em,
+h2 em {
+  color: var(--orange);
+  font-weight: 600;
+}
+
+.hero-description {
+  max-width: 430px;
+  margin-top: 24px;
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 14px;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+
+.primary-button {
+  padding: 17px 25px;
+  font-weight: 600;
+}
+
+.primary-button span {
+  font-size: 19px;
+}
+
+.secondary-button {
+  padding: 16px 25px;
+}
+
+.hero-benefits {
+  display: flex;
+  gap: 25px;
+  margin-top: 38px;
+  flex-wrap: wrap;
+}
+
+.hero-benefits > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.benefit-icon {
+  color: var(--orange);
+  font-size: 27px;
+  font-weight: 700;
+}
+
+.hero-visual {
+  height: 540px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-frame {
+  width: 100%;
+  height: 90%;
+  border: 8px solid var(--white);
+  border-radius: 38% 12% 30% 10% / 12% 15% 12% 16%;
+  transform: rotate(3deg);
+  background-image: url("../images/mutuals-homepage-reference.png");
+  background-size: 185% auto;
+  background-position: right 12%;
+  box-shadow: 0 20px 45px #7a301c25;
+  position: relative;
+  z-index: 1;
+}
+
+.photo-note {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  bottom: 60px;
+  background: var(--white);
+  padding: 15px 20px;
+  border-radius: 30px;
+  font-size: 13px;
+  box-shadow: 0 8px 25px #54231520;
+  transform: rotate(-5deg);
+}
+
+.spark {
+  position: absolute;
+  z-index: 2;
+  color: var(--orange);
+  font-size: 55px;
+}
+
+.spark-one {
+  top: 15px;
+  left: 5%;
+}
+
+.spark-two {
+  right: 1%;
+  bottom: 25px;
+  color: var(--yellow);
+}
+
+.hero-decoration {
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.decoration-top {
+  width: 190px;
+  height: 190px;
+  right: -12%;
+  top: -45px;
+  background: #e9a14d;
+  opacity: .45;
+}
+
+.decoration-bottom {
+  width: 180px;
+  height: 180px;
+  left: -14%;
+  bottom: 0;
+  background: #f1b18b;
+  opacity: .35;
+}
+
+.steps-section {
+  width: min(1380px, 90%);
+  margin: 35px auto 100px;
+  padding: 65px 5%;
+  border-radius: 35px;
+  background: var(--cream-dark);
+  display: grid;
+  grid-template-columns: .8fr 1.5fr;
+  align-items: center;
+  gap: 45px;
+}
+
+.section-intro h2,
+.community-copy h2 {
+  font-size: clamp(43px, 5vw, 65px);
+  line-height: 1.08;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+}
+
+.step {
+  text-align: center;
+  position: relative;
+}
+
+.step-number {
+  color: var(--orange);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.step-icon {
+  width: 76px;
+  height: 76px;
+  margin: 14px auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f5c5a3;
+  color: var(--orange);
+  font-size: 35px;
+  font-weight: 700;
+}
+
+.step h3 {
+  font-size: 17px;
+  margin-bottom: 9px;
+}
+
+.step p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.community-section {
+  width: min(1380px, 90%);
+  margin: 0 auto 100px;
+  display: grid;
+  grid-template-columns: .85fr 1.15fr;
+  align-items: center;
+  gap: 65px;
+}
+
+.community-copy p {
+  max-width: 430px;
+  line-height: 1.7;
+  margin: 22px 0 27px;
+}
+
+.community-visual {
+  min-height: 420px;
+  border: 8px solid var(--white);
+  border-radius: 48% 10% 12% 20% / 15% 20% 12% 22%;
+  transform: rotate(-2deg);
+  background-image: url("../images/mutuals-homepage-reference.png");
+  background-size: 185% auto;
+  background-position: right 90%;
+  box-shadow: 0 20px 45px #7a301c20;
+}
+
+.footer {
+  padding: 35px 5%;
+  background: var(--brown);
+  color: var(--cream);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-brand {
+  font-family: "Playfair Display", serif;
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.footer p,
+.footer span {
+  font-size: 13px;
+  opacity: .8;
+}

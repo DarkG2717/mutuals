@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choose your interests | Mutuals™</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/signup-interests.css">
+</head>
+<body>
+  <div class="page-decoration decoration-one"></div>
+  <div class="page-decoration decoration-two"></div>
+
+  <header class="topbar">
+    <a class="wordmark" href="../index.html">Mutuals<span>™</span></a>
+    <div class="topbar-right">
+      <span>Already have an account?</span>
+      <a href="login.html">Log in</a>
+    </div>
+  </header>
+
+  <main class="signup-layout">
+    <section class="intro-panel">
+      <div class="step-label"><span>03</span> / 03 — LAST STEP</div>
+
+      <div class="intro-copy">
+        <p class="eyebrow">A LITTLE MORE ABOUT YOU</p>
+        <h1>Find your<br><em>people.</em></h1>
+        <p class="intro-description">
+          The things you enjoy can bring you closer to people who enjoy them too.
+          Pick at least seven interests that feel like you.
+        </p>
+      </div>
+
+      <div class="intro-note">
+        <span class="note-star">✳</span>
+        <p>Different interests.<br>Shared experiences.<br>Real campus connections.</p>
+      </div>
+
+      <div class="intro-stamp">YOUR<br>COMMUNITY<br>STARTS HERE</div>
+    </section>
+
+    <section class="selection-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">MAKE YOUR PICKS</p>
+          <h2>What are you into?</h2>
+          <p class="panel-description">Choose as many as you like. You need at least 7.</p>
+        </div>
+
+        <div class="selection-count" aria-live="polite">
+          <strong id="selectedCount">0</strong>
+          <span>selected</span>
+        </div>
+      </div>
+
+      <label class="search-box">
+        <span class="search-icon">⌕</span>
+        <input
+          type="search"
+          id="interestSearch"
+          placeholder="Search all interests..."
+          autocomplete="off"
+          aria-label="Search interests"
+        >
+        <span class="search-hint">45 interests</span>
+      </label>
+
+      <div class="interest-grid" id="interestGrid" aria-label="Available interests"></div>
+
+      <p class="no-results" id="noResults" hidden>
+        No interests found. Try another search.
+      </p>
+
+      <section class="selected-section">
+        <div class="selected-heading">
+          <h3>Your picks</h3>
+          <span id="minimumStatus">7 needed to continue</span>
+        </div>
+        <div class="selected-list" id="selectedList">
+          <p class="empty-selection">Your chosen interests will appear here.</p>
+        </div>
+      </section>
+
+      <div class="progress-area">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-caption">
+          <span>YOUR INTERESTS</span>
+          <span id="progressText">0 of 7 minimum</span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="signup-details.html" class="back-button">← Back</a>
+        <button type="button" id="continueButton" disabled>
+          Continue <span>→</span>
+        </button>
+      </div>
+
+      <p class="privacy-note">Your interests help shape your Mutuals™ experience.</p>
+      <p class="completion-message" id="completionMessage" role="status" hidden>
+        Your interest selection is ready. Saving your profile will be connected by the backend developer.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const interests = [
+      { name: "Gaming", icon: "🎮" },
+      { name: "Watching movies", icon: "🎬" },
+      { name: "Watching series", icon: "📺" },
+      { name: "Anime", icon: "🌸" },
+      { name: "Listening to music", icon: "🎧" },
+      { name: "Afrobeats", icon: "🥁" },
+      { name: "Gospel music", icon: "🎶" },
+      { name: "K-dramas", icon: "🍿" },
+      { name: "Podcasts", icon: "🎙️" },
+      { name: "Comedy", icon: "😂" },
+
+      { name: "Singing", icon: "🎤" },
+      { name: "Dancing", icon: "💃" },
+      { name: "Writing", icon: "✍️" },
+      { name: "Poetry", icon: "📝" },
+      { name: "Drawing", icon: "✏️" },
+      { name: "Painting", icon: "🎨" },
+      { name: "Photography", icon: "📸" },
+      { name: "Graphic design", icon: "🖌️" },
+      { name: "Content creation", icon: "📱" },
+      { name: "Fashion", icon: "👗" },
+
+      { name: "Football", icon: "⚽" },
+      { name: "Basketball", icon: "🏀" },
+      { name: "Volleyball", icon: "🏐" },
+      { name: "Chess", icon: "♟️" },
+      { name: "Table tennis", icon: "🏓" },
+      { name: "Badminton", icon: "🏸" },
+      { name: "Athletics", icon: "🏃" },
+      { name: "Swimming", icon: "🏊" },
+      { name: "Board games", icon: "🎲" },
+      { name: "Esports", icon: "🕹️" },
+
+      { name: "Eating", icon: "🍜" },
+      { name: "Cooking", icon: "🍳" },
+      { name: "Sleeping", icon: "😴" },
+      { name: "Travelling", icon: "✈️" },
+      { name: "Exploring new places", icon: "🧭" },
+      { name: "Shopping", icon: "🛍️" },
+      { name: "Fitness", icon: "🏋️" },
+      { name: "Reading", icon: "📚" },
+      { name: "Gardening", icon: "🌱" },
+      { name: "Trying new things", icon: "✨" },
+
+      { name: "Technology", icon: "💻" },
+      { name: "Programming", icon: "👩‍💻" },
+      { name: "Artificial intelligence", icon: "🤖" },
+      { name: "Entrepreneurship", icon: "🚀" },
+      { name: "Business", icon: "📈" },
+      { name: "Science", icon: "🔬" },
+      { name: "Public speaking", icon: "🎙️" },
+      { name: "Volunteering", icon: "🤝" },
+      { name: "Learning languages", icon: "🌍" },
+      { name: "Making new friends", icon: "🫶" }
+    ];
+
+    const MINIMUM = 7;
+
+    // Restore only valid interests, and never restore more than 7.
+    let savedInterests = [];
+    try {
+      const stored = JSON.parse(
+        sessionStorage.getItem("mutualsSelectedInterests") || "[]"
+      );
+
+      if (Array.isArray(stored)) {
+        savedInterests = stored
+          .filter(name => interests.some(item => item.name === name))
+          .slice(0, MINIMUM);
+      }
+    } catch (error) {
+      savedInterests = [];
+    }
+
+    const selected = new Set(savedInterests);
+    sessionStorage.setItem(
+      "mutualsSelectedInterests",
+      JSON.stringify([...selected])
+    );
+
+    const grid = document.getElementById("interestGrid");
+    const selectedList = document.getElementById("selectedList");
+    const count = document.getElementById("selectedCount");
+    const search = document.getElementById("interestSearch");
+    const noResults = document.getElementById("noResults");
+    const continueButton = document.getElementById("continueButton");
+    const minimumStatus = document.getElementById("minimumStatus");
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+    const completionMessage = document.getElementById("completionMessage");
+
+    function saveSelection() {
+      sessionStorage.setItem(
+        "mutualsSelectedInterests",
+        JSON.stringify([...selected])
+      );
+    }
+
+    function renderInterests() {
+      const query = search.value.trim().toLowerCase();
+
+      const filtered = interests.filter(interest =>
+        interest.name.toLowerCase().includes(query)
+      );
+
+      grid.innerHTML = "";
+
+      filtered.forEach(interest => {
+        const isSelected = selected.has(interest.name);
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "interest-card";
+        button.classList.toggle("selected", isSelected);
+        button.disabled = !isSelected && selected.size >= MINIMUM;
+        button.setAttribute("aria-pressed", String(isSelected));
+
+        button.innerHTML = `
+          <span class="interest-icon">${interest.icon}</span>
+          <span class="interest-name">${interest.name}</span>
+          <span class="interest-check">✓</span>
+        `;
+
+        button.addEventListener("click", () => {
+          if (selected.has(interest.name)) {
+            selected.delete(interest.name);
+          } else {
+            // Final guard: never allow an eighth selection.
+            if (selected.size >= MINIMUM) return;
+            selected.add(interest.name);
+          }
+
+          saveSelection();
+          renderInterests();
+          renderSelected();
+        });
+
+        grid.appendChild(button);
+      });
+
+      noResults.hidden = filtered.length > 0;
+
+      if (typeof limitMessage !== "undefined") {
+        limitMessage.hidden = selected.size < MINIMUM;
+      }
+    }
+
+    function renderSelected() {
+      const total = selected.size;
+      count.textContent = total;
+
+      selectedList.innerHTML = "";
+
+      if (total === 0) {
+        selectedList.innerHTML =
+          '<p class="empty-selection">Your chosen interests will appear here.</p>';
+      } else {
+        interests
+          .filter(interest => selected.has(interest.name))
+          .forEach(interest => {
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "selected-chip";
+            chip.innerHTML = `<span>${interest.icon} ${interest.name}</span><span class="remove-chip">×</span>`;
+            chip.setAttribute("aria-label", `Remove ${interest.name}`);
+
+            chip.addEventListener("click", () => {
+              selected.delete(interest.name);
+              saveSelection();
+              renderInterests();
+              renderSelected();
+            });
+
+            selectedList.appendChild(chip);
+          });
+      }
+
+      const ready = total === MINIMUM;
+      continueButton.disabled = !ready;
+
+      minimumStatus.textContent = ready
+        ? "Minimum reached ✓"
+        : `${MINIMUM - total} more needed`;
+
+      minimumStatus.classList.toggle("complete", ready);
+
+      progressFill.style.width =
+        `${Math.min((total / MINIMUM) * 100, 100)}%`;
+
+      progressText.textContent = ready
+        ? `${total} selected — you're ready`
+        : `${total} of ${MINIMUM} minimum`;
+    }
+
+    search.addEventListener("input", renderInterests);
+
+    continueButton.addEventListener("click", () => {
+      if (selected.size !== MINIMUM) return;
+
+      completionMessage.hidden = false;
+      completionMessage.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest"
+      });
+    });
+
+    renderInterests();
+    renderSelected();
+  </script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Join Mutuals and find your people on campus.">
+  <title>Create your account | Mutuals™</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/signup.css">
+</head>
+<body>
+  <main class="signup-page">
+    <section class="signup-story">
+      <a class="brand" href="../index.html" aria-label="Mutuals home">Mutuals<span>™</span></a>
+
+      <div class="story-content">
+        <p class="eyebrow">YOUR CAMPUS. YOUR COMMUNITY.</p>
+        <h1>Good people.<br><em>Great connections.</em></h1>
+        <p class="story-copy">
+          Your next favourite people could be just around the corner.
+          Start by creating your Mutuals account.
+        </p>
+        <div class="story-note">
+          <span class="note-mark">✳</span>
+          <span>A place to find your people and feel more connected.</span>
+        </div>
+      </div>
+
+      <p class="story-footer">Made for campus life. Made for connection.</p>
+      <span class="decor decor-one">✳</span>
+      <span class="decor decor-two">✦</span>
+    </section>
+
+    <section class="signup-panel">
+      <div class="form-wrap">
+        <p class="step-label">GET STARTED <span>01 / 02</span></p>
+        <div class="progress-track"><span></span></div>
+
+        <div class="form-heading">
+          <p class="eyebrow">WELCOME TO MUTUALS</p>
+          <h2>Let's get you<br>connected.</h2>
+          <p id="step-description">Create your account and find your people.</p>
+        </div>
+
+        <button class="google-button" type="button" id="google-signup-button">
+          <span class="google-icon">G</span>
+          Continue with Google
+        </button>
+
+        <div class="signup-divider"><span>OR</span></div>
+
+        <button class="email-toggle" type="button" id="email-toggle">
+          Continue with email <span aria-hidden="true">→</span>
+        </button>
+
+        <form id="email-signup-form" hidden>
+          <div class="field">
+            <label for="email">Email address</label>
+            <input type="email" id="email" name="email"
+              placeholder="you@example.com" autocomplete="email" required>
+          </div>
+
+          <div class="field">
+            <label for="password">Create password</label>
+            <input type="password" id="password" name="password"
+              placeholder="At least 8 characters"
+              autocomplete="new-password" minlength="8" required>
+          </div>
+
+          <button class="submit-button" type="submit" id="email-submit-button">
+            Create account <span aria-hidden="true">→</span>
+          </button>
+        </form>
+
+        <p class="form-message" id="form-message"
+          role="status" aria-live="polite"></p>
+
+        <p class="login-prompt">
+          Already have an account?
+          <a href="login.html">Log in</a>
+        </p>
+
+        <p class="terms-note">
+          By continuing, you agree to use Mutuals respectfully and help
+          keep our campus community welcoming.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import {
+      signInWithGoogle,
+      registerWithEmail
+    } from "../assets/js/auth.js";
+
+    const googleButton = document.getElementById("google-signup-button");
+    const emailToggle = document.getElementById("email-toggle");
+    const emailForm = document.getElementById("email-signup-form");
+    const emailButton = document.getElementById("email-submit-button");
+    const message = document.getElementById("form-message");
+
+    function showMessage(text, type = "error") {
+      message.textContent = text;
+      message.className = `form-message ${type}`;
+    }
+
+    emailToggle.addEventListener("click", () => {
+      emailForm.hidden = !emailForm.hidden;
+      emailToggle.innerHTML = emailForm.hidden
+        ? 'Continue with email <span aria-hidden="true">→</span>'
+        : 'Hide email signup <span aria-hidden="true">↑</span>';
+
+      if (!emailForm.hidden) {
+        document.getElementById("email").focus();
+      }
+    });
+
+    googleButton.addEventListener("click", async () => {
+      try {
+        googleButton.disabled = true;
+        googleButton.textContent = "Connecting to Google...";
+        showMessage("");
+
+        await signInWithGoogle();
+      } catch (error) {
+        console.error(error);
+        showMessage(error.message || "Google signup failed. Please try again.");
+        googleButton.disabled = false;
+        googleButton.innerHTML =
+          '<span class="google-icon">G</span> Continue with Google';
+      }
+    });
+
+    emailForm.addEventListener("submit", async event => {
+      event.preventDefault();
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (password.length < 8) {
+        showMessage("Your password must contain at least 8 characters.");
+        return;
+      }
+
+      try {
+        emailButton.disabled = true;
+        emailButton.textContent = "Creating account...";
+        showMessage("");
+
+        const { session } = await registerWithEmail(email, password);
+
+        if (session) {
+          window.location.href = "signup-details.html";
+          return;
+        }
+
+        emailForm.hidden = true;
+        emailToggle.hidden = true;
+        googleButton.hidden = true;
+
+        showMessage(
+          "Account created! Check your inbox for the verification link. You can continue after verifying your email.",
+          "success"
+        );
+      } catch (error) {
+        console.error(error);
+        showMessage(error.message || "Unable to create your account.");
+        emailButton.disabled = false;
+        emailButton.innerHTML = 'Create account <span aria-hidden="true">→</span>';
+      }
+    });
+  </script>
+</body>
+</html>
