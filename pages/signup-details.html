@@ -128,6 +128,7 @@
     </section>
   </main>
 
+<<<<<<< HEAD
 
 <script type="module">
   import {
@@ -216,5 +217,27 @@
   });
 </script>
 
+=======
+  <script>
+    const detailsForm = document.getElementById('details-form');
+    const detailsMessage = document.getElementById('form-message');
+
+    detailsForm.addEventListener('submit', event => {
+      event.preventDefault();
+
+      const age = Number(document.getElementById('age').value);
+
+      if (!Number.isInteger(age) || age < 13 || age > 99) {
+        detailsMessage.textContent = 'Please enter a valid age.';
+        detailsMessage.className = 'form-message error';
+        return;
+      }
+
+      detailsMessage.textContent =
+        'Your details look good. Profile saving and the next stage will be connected with the relevant developers.';
+      detailsMessage.className = 'form-message success';
+    });
+  </script>
+>>>>>>> origin/main
 </body>
 </html>

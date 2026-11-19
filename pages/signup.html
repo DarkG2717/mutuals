@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,6 +45,7 @@
         <div class="form-heading">
           <p class="eyebrow">WELCOME TO MUTUALS</p>
           <h2>Let's get you<br>connected.</h2>
+<<<<<<< HEAD
           <p id="step-description">Create your account and find your people.</p>
         </div>
 
@@ -57,6 +61,12 @@
         </button>
 
         <form id="email-signup-form" hidden>
+=======
+          <p>Create your account to get started. It only takes a moment.</p>
+        </div>
+
+        <form id="signup-form">
+>>>>>>> origin/main
           <div class="field">
             <label for="email">Email address</label>
             <input type="email" id="email" name="email"
@@ -65,6 +75,7 @@
 
           <div class="field">
             <label for="password">Create password</label>
+<<<<<<< HEAD
             <input type="password" id="password" name="password"
               placeholder="At least 8 characters"
               autocomplete="new-password" minlength="8" required>
@@ -78,6 +89,36 @@
         <p class="form-message" id="form-message"
           role="status" aria-live="polite"></p>
 
+=======
+            <div class="password-wrap">
+              <input type="password" id="password" name="password"
+                placeholder="At least 8 characters" autocomplete="new-password"
+                minlength="8" required>
+              <button class="password-toggle" type="button"
+                data-target="password" aria-label="Show password">Show</button>
+            </div>
+            <small>Use at least 8 characters.</small>
+          </div>
+
+          <div class="field">
+            <label for="confirm-password">Confirm password</label>
+            <div class="password-wrap">
+              <input type="password" id="confirm-password"
+                name="confirm-password" placeholder="Enter your password again"
+                autocomplete="new-password" minlength="8" required>
+              <button class="password-toggle" type="button"
+                data-target="confirm-password" aria-label="Show confirmation password">Show</button>
+            </div>
+          </div>
+
+          <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+
+          <button class="submit-button" type="submit">
+            Continue <span aria-hidden="true">→</span>
+          </button>
+        </form>
+
+>>>>>>> origin/main
         <p class="login-prompt">
           Already have an account?
           <a href="login.html">Log in</a>
@@ -91,6 +132,7 @@
     </section>
   </main>
 
+<<<<<<< HEAD
   <script type="module">
     import {
       signInWithGoogle,
@@ -172,6 +214,44 @@
         emailButton.disabled = false;
         emailButton.innerHTML = 'Create account <span aria-hidden="true">→</span>';
       }
+=======
+  <script>
+    const form = document.getElementById('signup-form');
+    const message = document.getElementById('form-message');
+
+    document.querySelectorAll('.password-toggle').forEach(button => {
+      button.addEventListener('click', () => {
+        const input = document.getElementById(button.dataset.target);
+        const showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        button.textContent = showing ? 'Show' : 'Hide';
+        button.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      });
+    });
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+      const confirmation = document.getElementById('confirm-password').value;
+      const blockedDomains = ['example.com', 'example.org', 'example.net'];
+      const emailDomain = email.split('@').pop();
+
+      if (blockedDomains.includes(emailDomain)) {
+        message.textContent = 'Please enter your actual email address.';
+        message.className = 'form-message error';
+        return;
+      }
+
+      if (password !== confirmation) {
+        message.textContent = 'Your passwords do not match. Please check them.';
+        message.className = 'form-message error';
+        return;
+      }
+
+      message.textContent = 'The form looks good. Account creation will be connected by the authentication developer.';
+      message.className = 'form-message success';
+>>>>>>> origin/main
     });
   </script>
 </body>

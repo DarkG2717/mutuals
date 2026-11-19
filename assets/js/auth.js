@@ -3,11 +3,16 @@ import { supabase, supabaseConfigured } from "./supabase.js";
 
 function requireSupabase() {
   if (!supabaseConfigured || !supabase) {
+<<<<<<< HEAD
     throw new Error("Supabase credentials have not been configured.");
+=======
+    throw new Error("Supabase credentials have not been configured yet.");
+>>>>>>> origin/main
   }
   return supabase;
 }
 
+<<<<<<< HEAD
 // EMAIL SIGNUP WITH VERIFICATION LINK
 export async function registerWithEmail(email, password) {
   const client = requireSupabase();
@@ -17,10 +22,21 @@ export async function registerWithEmail(email, password) {
     password,
     options: {
       emailRedirectTo: `${window.location.origin}/pages/signup-details.html`
+=======
+// STEP 1: Send email OTP during registration.
+export async function sendSignupOTP(email) {
+  const client = requireSupabase();
+
+  const { error } = await client.auth.signInWithOtp({
+    email: email.trim().toLowerCase(),
+    options: {
+      shouldCreateUser: true
+>>>>>>> origin/main
     }
   });
 
   if (error) throw error;
+<<<<<<< HEAD
   return data;
 }
 
@@ -37,6 +53,16 @@ export async function sendSignupOTP(email) {
 
 export async function verifySignupOTP(email, token) {
   const { data, error } = await requireSupabase().auth.verifyOtp({
+=======
+  return true;
+}
+
+// STEP 2: Verify registration OTP.
+export async function verifySignupOTP(email, token) {
+  const client = requireSupabase();
+
+  const { data, error } = await client.auth.verifyOtp({
+>>>>>>> origin/main
     email: email.trim().toLowerCase(),
     token: token.trim(),
     type: "email"
@@ -46,6 +72,7 @@ export async function verifySignupOTP(email, token) {
   return data;
 }
 
+<<<<<<< HEAD
 export async function setAccountPassword(password) {
   const { data, error } = await requireSupabase().auth.updateUser({ password });
 
@@ -62,15 +89,31 @@ export async function signInWithGoogle() {
     options: {
       redirectTo: `${window.location.origin}/pages/signup-details.html`
     }
+=======
+// STEP 3: Set password after email verification.
+export async function setAccountPassword(password) {
+  const client = requireSupabase();
+
+  const { data, error } = await client.auth.updateUser({
+    password
+>>>>>>> origin/main
   });
 
   if (error) throw error;
   return data;
 }
 
+<<<<<<< HEAD
 // EMAIL LOGIN
 export async function loginUser(email, password) {
   const { data, error } = await requireSupabase().auth.signInWithPassword({
+=======
+// LOGIN: Email and password.
+export async function loginUser(email, password) {
+  const client = requireSupabase();
+
+  const { data, error } = await client.auth.signInWithPassword({
+>>>>>>> origin/main
     email: email.trim().toLowerCase(),
     password
   });
@@ -79,19 +122,39 @@ export async function loginUser(email, password) {
   return data;
 }
 
+<<<<<<< HEAD
 // PASSWORD RECOVERY
 export async function sendPasswordResetOTP(email) {
   const { error } = await requireSupabase().auth.signInWithOtp({
     email: email.trim().toLowerCase(),
     options: { shouldCreateUser: false }
+=======
+// FORGOT PASSWORD: Request recovery OTP.
+export async function sendPasswordResetOTP(email) {
+  const client = requireSupabase();
+
+  const { error } = await client.auth.signInWithOtp({
+    email: email.trim().toLowerCase(),
+    options: {
+      shouldCreateUser: false
+    }
+>>>>>>> origin/main
   });
 
   if (error) throw error;
   return true;
 }
 
+<<<<<<< HEAD
 export async function verifyPasswordResetOTP(email, token) {
   const { data, error } = await requireSupabase().auth.verifyOtp({
+=======
+// Verify recovery OTP.
+export async function verifyPasswordResetOTP(email, token) {
+  const client = requireSupabase();
+
+  const { data, error } = await client.auth.verifyOtp({
+>>>>>>> origin/main
     email: email.trim().toLowerCase(),
     token: token.trim(),
     type: "email"
@@ -101,8 +164,16 @@ export async function verifyPasswordResetOTP(email, token) {
   return data;
 }
 
+<<<<<<< HEAD
 export async function resetPassword(newPassword) {
   const { data, error } = await requireSupabase().auth.updateUser({
+=======
+// Set new password after recovery verification.
+export async function resetPassword(newPassword) {
+  const client = requireSupabase();
+
+  const { data, error } = await client.auth.updateUser({
+>>>>>>> origin/main
     password: newPassword
   });
 
@@ -110,14 +181,23 @@ export async function resetPassword(newPassword) {
   return data;
 }
 
+<<<<<<< HEAD
 // CURRENT USER
 export async function getCurrentUser() {
   const { data, error } = await requireSupabase().auth.getUser();
+=======
+// Get current authenticated user.
+export async function getCurrentUser() {
+  const client = requireSupabase();
+
+  const { data, error } = await client.auth.getUser();
+>>>>>>> origin/main
 
   if (error) throw error;
   return data.user;
 }
 
+<<<<<<< HEAD
 // GET USER PROFILE
 export async function getUserProfile() {
   const client = requireSupabase();
@@ -221,6 +301,13 @@ export async function saveUserInterests(names) {
 // LOGOUT
 export async function logoutUser() {
   const { error } = await requireSupabase().auth.signOut();
+=======
+// LOGOUT.
+export async function logoutUser() {
+  const client = requireSupabase();
+
+  const { error } = await client.auth.signOut();
+>>>>>>> origin/main
 
   if (error) throw error;
 }

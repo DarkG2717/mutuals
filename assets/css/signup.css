@@ -384,6 +384,7 @@ body {
     font-size: 39px;
   }
 }
+<<<<<<< HEAD
 
 
 .google-button,
@@ -454,3 +455,5 @@ body {
 .google-button[hidden] {
   display: none;
 }
+=======
+>>>>>>> origin/main
