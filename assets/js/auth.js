@@ -140,18 +140,43 @@ export async function logoutUser() {
 export const registerWithEmail = signUpWithPassword;
 
 // GOOGLE OAUTH: redirects the browser to Google and back to the site.
+// The landing page decides where the user goes next: auth-callback.html checks
+// whether this account is brand new or already has a profile. That is what makes
+// "Continue with Google" log an existing user straight into their account
+// instead of dragging them through signup again.
 export async function signInWithGoogle(redirectTo) {
   const client = requireSupabase();
 
   const { data, error } = await client.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: redirectTo || window.location.origin + "/pages/signup-details.html"
+      redirectTo: redirectTo || window.location.origin + "/pages/auth-callback.html"
     }
   });
 
   if (error) throw error;
   return data;
+}
+
+// Where a signed-in user actually belongs, based on their own data.
+// Single source of truth for redirect decisions after login / OAuth.
+export async function resolveLanding(user) {
+  const client = requireSupabase();
+
+  if (!user) return "login.html";
+
+  const [{ data: profile }, { data: interests }] = await Promise.all([
+    client.from("profiles").select("avatar_url, onboarding_completed, hall").eq("id", user.id).maybeSingle(),
+    client.from("user_interests").select("interest_id").eq("user_id", user.id)
+  ]);
+
+  if (!profile) return "signup-details.html";
+  if (!profile.avatar_url) return "profile.html#photo";
+  if (!profile.onboarding_completed || (interests || []).length < 5) {
+    return "signup-interests.html";
+  }
+
+  return "discover.html";
 }
 
 // PROFILE: create or update the signed-in user's profile row.

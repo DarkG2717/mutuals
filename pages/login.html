@@ -40,6 +40,13 @@
           <p>Log in to keep discovering students who share your interests.</p>
         </div>
 
+        <button class="google-button" type="button" id="google-login-button">
+          <span class="google-icon">G</span>
+          Continue with Google
+        </button>
+
+        <div class="signup-divider"><span>OR</span></div>
+
         <form id="login-form">
           <div class="field">
             <label for="email">Email address</label>
@@ -78,7 +85,7 @@
   </main>
 
   <script type="module">
-    import { loginUser, getCurrentUser } from '../assets/js/auth.js';
+    import { loginUser, getCurrentUser, signInWithGoogle, resolveLanding } from '../assets/js/auth.js';
 
     const form = document.getElementById('login-form');
     const message = document.getElementById('form-message');
@@ -111,8 +118,10 @@
       message.className = 'form-message';
 
       try {
-        await loginUser(email, password);
-        window.location.href = 'discover.html';
+        const { user } = await loginUser(email, password);
+        // Same routing as Google: ask the account where it belongs rather than
+        // assuming everyone is ready for the deck.
+        window.location.replace(await resolveLanding(user));
       } catch (error) {
         const text = error.message || 'Could not log you in. Please try again.';
         showError(text.toLowerCase().includes('invalid')
@@ -121,10 +130,28 @@
       }
     });
 
-    // Already signed in? Skip straight to the deck.
+    // Google on the login page: an existing account goes straight in, a new one
+    // is routed into onboarding by the callback page.
+    const googleButton = document.getElementById('google-login-button');
+
+    googleButton.addEventListener('click', async () => {
+      try {
+        googleButton.disabled = true;
+        googleButton.textContent = 'Connecting to Google…';
+        message.textContent = '';
+        await signInWithGoogle();
+      } catch (error) {
+        googleButton.disabled = false;
+        googleButton.innerHTML = '<span class="google-icon">G</span> Continue with Google';
+        showError(error.message || 'Google sign-in failed. Please try again.');
+      }
+    });
+
+    // Already signed in? Skip straight to wherever that account belongs.
     getCurrentUser()
       .then(user => {
-        if (user) window.location.href = 'discover.html';
+        if (!user) return;
+        return resolveLanding(user).then(destination => window.location.replace(destination));
       })
       .catch(() => {
         /* not signed in — stay on the page */

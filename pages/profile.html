@@ -109,7 +109,7 @@
         </div>
       </section>
 
-      <section class="panel" style="--delay:.18s">
+      <section class="panel" id="settings" style="--delay:.18s">
         <header class="panel-head">
           <div>
             <p class="eyebrow">The boring, important part</p>
@@ -155,10 +155,11 @@
 
   <script type="module">
     import { supabase } from '../assets/js/supabase.js';
+    import { uploadAvatar as uploadAvatarFile } from '../assets/js/avatar.js';
 
     const MINIMUM_INTERESTS = 5;
+    const MAXIMUM_INTERESTS = 5;
     const BIO_LIMIT = 160;
-    const AVATAR_PX = 800;
 
     const els = {
       avatarWrap: document.getElementById('avatarWrap'),
@@ -308,7 +309,7 @@
 
       if (!source.size) {
         els.interestGrid.innerHTML =
-          '<p class="chip-empty">No interests yet — pick at least ' + MINIMUM_INTERESTS + '.</p>';
+          '<p class="chip-empty">No interests yet — pick exactly ' + MINIMUM_INTERESTS + '.</p>';
         return;
       }
 
@@ -332,6 +333,8 @@
       });
 
       if (editingInterests) {
+        const atLimit = source.size >= MAXIMUM_INTERESTS;
+
         const available = catalogue
           .filter(interest => !source.has(interest.id))
           .sort((a, b) => a.name.localeCompare(b.name));
@@ -341,7 +344,11 @@
           chip.type = 'button';
           chip.className = 'chip';
           chip.textContent = interest.name;
+          chip.disabled = atLimit;
+          if (atLimit) chip.classList.add('locked');
           chip.addEventListener('click', () => {
+            // Five is the cap, not a suggestion.
+            if (draftInterests.size >= MAXIMUM_INTERESTS) return;
             draftInterests.add(interest.id);
             renderInterests();
             renderInterestActions();
@@ -358,80 +365,33 @@
       if (!editingInterests) return;
 
       const count = draftInterests.size;
-      const ready = count >= MINIMUM_INTERESTS;
+      const ready = count === MAXIMUM_INTERESTS;
       els.saveInterests.disabled = !ready;
-      els.interestNote.textContent = ready
-        ? `${count} selected — save when you're done.`
-        : `${count} selected. You need ${MINIMUM_INTERESTS - count} more.`;
-      els.interestNote.style.color = ready ? '' : '#a3331a';
+
+      if (count > MAXIMUM_INTERESTS) {
+        els.interestNote.textContent = `You can only keep ${MAXIMUM_INTERESTS}. Remove ${count - MAXIMUM_INTERESTS}.`;
+        els.interestNote.style.color = '#a3331a';
+      } else if (ready) {
+        els.interestNote.textContent = `${MAXIMUM_INTERESTS} selected — that's the cap. Save when you're ready.`;
+        els.interestNote.style.color = '';
+      } else {
+        els.interestNote.textContent = `${count} selected. Pick ${MAXIMUM_INTERESTS - count} more — exactly ${MAXIMUM_INTERESTS}, no more.`;
+        els.interestNote.style.color = '#a3331a';
+      }
     }
 
     /* ---------------- avatar ---------------- */
 
-    async function squareJpeg(file) {
-      const bitmap = await createImageBitmap(file);
-      const canvas = document.createElement('canvas');
-      canvas.width = AVATAR_PX;
-      canvas.height = AVATAR_PX;
-      const ctx = canvas.getContext('2d');
-
-      const scale = Math.max(AVATAR_PX / bitmap.width, AVATAR_PX / bitmap.height);
-      const width = bitmap.width * scale;
-      const height = bitmap.height * scale;
-
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(bitmap, (AVATAR_PX - width) / 2, (AVATAR_PX - height) / 2, width, height);
-      bitmap.close?.();
-
-      return new Promise((resolve, reject) => {
-        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Could not read that image.')), 'image/jpeg', 0.9);
-      });
-    }
-
     async function uploadAvatar(file) {
-      if (!file.type.startsWith('image/')) {
-        toast('That file is not an image.', true);
-        return;
-      }
-
-      if (file.size > 12 * 1024 * 1024) {
-        toast('That photo is over 12 MB. Pick a smaller one.', true);
-        return;
-      }
-
       els.avatarWrap.classList.add('uploading');
 
       try {
-        const blob = await squareJpeg(file);
-        const path = `${user.id}/avatar.jpg`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
-
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrl } = supabase.storage.from('avatars').getPublicUrl(path);
-        const avatarUrl = `${publicUrl.publicUrl}?v=${Date.now()}`;
-
-        const { error: saveError } = await supabase
-          .from('profiles')
-          .update({ avatar_url: avatarUrl })
-          .eq('id', user.id);
-
-        if (saveError) throw saveError;
-
+        const avatarUrl = await uploadAvatarFile(supabase, user.id, file);
         profile.avatar_url = avatarUrl;
         renderIdentity();
         toast('Photo updated. You can be discovered now.');
       } catch (error) {
-        // The bucket is created by the avatar_storage migration. Say that
-        // plainly instead of leaking a storage error into the user's face.
-        const message = /bucket|not found/i.test(error.message || '')
-          ? 'Photo storage is not set up yet — run the avatar storage migration.'
-          : (error.message || 'Could not upload that photo.');
-        toast(message, true);
+        toast(error.message || 'Could not upload that photo.', true);
       } finally {
         els.avatarWrap.classList.remove('uploading');
         els.avatarInput.value = '';
@@ -539,7 +499,7 @@
     });
 
     els.saveInterests.addEventListener('click', async () => {
-      if (draftInterests.size < MINIMUM_INTERESTS) return;
+      if (draftInterests.size !== MAXIMUM_INTERESTS) return;
 
       els.saveInterests.disabled = true;
 

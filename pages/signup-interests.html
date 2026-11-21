@@ -30,7 +30,8 @@
         <h1>Find your<br><em>people.</em></h1>
         <p class="intro-description">
           The things you enjoy can bring you closer to people who enjoy them too.
-          Pick at least seven interests that feel like you.
+          Pick exactly five interests that feel like you — and add a photo so people
+          know who they're meeting.
         </p>
       </div>
 
@@ -47,7 +48,7 @@
         <div>
           <p class="eyebrow">MAKE YOUR PICKS</p>
           <h2>What are you into?</h2>
-          <p class="panel-description">Choose as many as you like. You need at least 5.</p>
+          <p class="panel-description">Choose exactly 5. No more, no less.</p>
         </div>
 
         <div class="selection-count" aria-live="polite">
@@ -55,6 +56,26 @@
           <span>selected</span>
         </div>
       </div>
+
+      <section class="photo-card" id="photoCard">
+        <div class="photo-copy">
+          <p class="eyebrow">ONE LAST THING</p>
+          <h3>Your photo.</h3>
+          <p>Required. No photo, no deck — people decide with their eyes first.</p>
+        </div>
+
+        <div class="photo-upload" id="photoUpload">
+          <div class="photo-frame" id="photoFrame">
+            <img id="photoPreview" alt="Your profile photo" hidden>
+            <span id="photoInitials">?</span>
+          </div>
+          <div class="photo-side">
+            <button type="button" class="photo-button" id="photoButton">Upload photo</button>
+            <span class="photo-status" id="photoStatus">JPG, PNG or WebP</span>
+          </div>
+          <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp" hidden>
+        </div>
+      </section>
 
       <label class="search-box">
         <span class="search-icon">⌕</span>
@@ -90,7 +111,7 @@
         </div>
         <div class="progress-caption">
           <span>YOUR INTERESTS</span>
-          <span id="progressText">0 of 5 minimum</span>
+          <span id="progressText">0 of 5</span>
         </div>
       </div>
 
@@ -110,8 +131,10 @@
 
   <script type="module">
     import { supabase } from "../assets/js/supabase.js";
+    import { uploadAvatar } from "../assets/js/avatar.js";
 
-    const MINIMUM = 5;
+    // Five is the rule in both directions: not fewer, not more.
+    const REQUIRED = 5;
 
     const ICONS = {
       "Gaming": "🎮", "Watching movies": "🎬", "Watching series": "📺", "Anime": "🌸",
@@ -151,7 +174,61 @@
 
     let interests = [];
     let viewerId = null;
+    let hasPhoto = false;
     const selected = new Map();
+
+    const photoPreview = document.getElementById("photoPreview");
+    const photoInitials = document.getElementById("photoInitials");
+    const photoButton = document.getElementById("photoButton");
+    const photoInput = document.getElementById("photoInput");
+    const photoStatus = document.getElementById("photoStatus");
+    const photoFrame = document.getElementById("photoFrame");
+
+    function paintPhoto(url, initials) {
+      hasPhoto = Boolean(url);
+
+      if (url) {
+        photoPreview.src = url;
+        photoPreview.hidden = false;
+        photoInitials.hidden = true;
+        photoFrame.classList.add("has-photo");
+        photoButton.textContent = "Change photo";
+        photoStatus.textContent = "Looking good ✓";
+        photoStatus.classList.add("ok");
+      } else {
+        photoPreview.hidden = true;
+        photoInitials.hidden = false;
+        photoInitials.textContent = initials || "?";
+        photoFrame.classList.remove("has-photo");
+        photoButton.textContent = "Upload photo";
+        photoStatus.textContent = "Required to continue";
+        photoStatus.classList.remove("ok");
+      }
+
+      // Continue is gated on both the photo and exactly five interests.
+      renderSelected();
+    }
+
+    photoButton.addEventListener("click", () => photoInput.click());
+
+    photoInput.addEventListener("change", async event => {
+      const [file] = event.target.files || [];
+      if (!file) return;
+
+      photoFrame.classList.add("uploading");
+      photoStatus.textContent = "Uploading…";
+
+      try {
+        const url = await uploadAvatar(supabase, viewerId, file);
+        paintPhoto(url);
+      } catch (error) {
+        photoStatus.textContent = error.message || "Upload failed.";
+        photoStatus.classList.remove("ok");
+      } finally {
+        photoFrame.classList.remove("uploading");
+        photoInput.value = "";
+      }
+    });
 
     function saveSelection() {
       sessionStorage.setItem(
@@ -177,6 +254,11 @@
         button.classList.toggle("selected", isSelected);
         button.setAttribute("aria-pressed", String(isSelected));
 
+        // At the cap, everything unselected is visibly out of reach.
+        const locked = !isSelected && selected.size >= REQUIRED;
+        button.classList.toggle("locked", locked);
+        button.disabled = locked;
+
         button.innerHTML = `
           <span class="interest-icon">${interest.icon}</span>
           <span class="interest-name">${interest.name}</span>
@@ -187,6 +269,13 @@
           if (selected.has(interest.id)) {
             selected.delete(interest.id);
           } else {
+            // Hard cap. Without this the deck gets flooded by people who
+            // selected everything, which defeats interest matching entirely.
+            if (selected.size >= REQUIRED) {
+              minimumStatus.textContent = `That's ${REQUIRED} — remove one first`;
+              minimumStatus.classList.remove("complete");
+              return;
+            }
             selected.set(interest.id, interest.name);
           }
 
@@ -230,24 +319,33 @@
           });
       }
 
-      const ready = total >= MINIMUM;
-      continueButton.disabled = !ready;
+      const ready = total === REQUIRED;
+      continueButton.disabled = !(ready && hasPhoto);
 
-      minimumStatus.textContent = ready
-        ? "Minimum reached ✓"
-        : `${MINIMUM - total} more needed`;
+      if (!ready) {
+        minimumStatus.textContent = `${REQUIRED - total} more needed`;
+      } else if (!hasPhoto) {
+        minimumStatus.textContent = "Add a photo to continue";
+      } else {
+        minimumStatus.textContent = "You're ready ✓";
+      }
 
-      minimumStatus.classList.toggle("complete", ready);
+      minimumStatus.classList.toggle("complete", ready && hasPhoto);
 
-      progressFill.style.width = `${Math.min((total / MINIMUM) * 100, 100)}%`;
+      progressFill.style.width = `${Math.min((total / REQUIRED) * 100, 100)}%`;
 
       progressText.textContent = ready
-        ? `${total} selected — you're ready`
-        : `${total} of ${MINIMUM} minimum`;
+        ? `${total} of ${REQUIRED} — full set`
+        : `${total} of ${REQUIRED}`;
     }
 
     async function saveAndContinue() {
-      if (selected.size < MINIMUM) return;
+      if (selected.size !== REQUIRED) return;
+      if (!hasPhoto) {
+        completionMessage.hidden = false;
+        completionMessage.textContent = "A profile photo is required before you can continue.";
+        return;
+      }
 
       continueButton.disabled = true;
       completionMessage.hidden = false;
@@ -378,6 +476,24 @@
           });
         }
       }
+
+      // 3. Existing photo. The Continue gate reads it, so it has to be known
+      //    before the first render.
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("avatar_url, nickname, full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const initials = (profileRow?.nickname || profileRow?.full_name || "")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 1)
+        .map(part => part[0] || "")
+        .join("")
+        .toUpperCase();
+
+      paintPhoto(profileRow?.avatar_url || null, initials);
 
       renderInterests();
       renderSelected();

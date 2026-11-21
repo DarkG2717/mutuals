@@ -93,7 +93,9 @@
   <script type="module">
     import {
       signInWithGoogle,
-      registerWithEmail
+      registerWithEmail,
+      getCurrentUser,
+      resolveLanding
     } from "../assets/js/auth.js";
 
     const googleButton = document.getElementById("google-signup-button");
@@ -124,6 +126,8 @@
         googleButton.textContent = "Connecting to Google...";
         showMessage("");
 
+        // Google decides whether this is a new or existing account. The callback
+        // page routes an existing user straight into the app — no second signup.
         await signInWithGoogle();
       } catch (error) {
         console.error(error);
@@ -133,6 +137,17 @@
           '<span class="google-icon">G</span> Continue with Google';
       }
     });
+
+    // Already have a session? There is nothing to sign up for — send them where
+    // they belong instead of showing a form that would create a second account.
+    getCurrentUser()
+      .then(user => {
+        if (!user) return;
+        resolveLanding(user)
+          .then(destination => window.location.replace(destination))
+          .catch(() => {});
+      })
+      .catch(() => {});
 
     emailForm.addEventListener("submit", async event => {
       event.preventDefault();

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Signing you in | Mutuals™</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/profile.css">
+  <style>
+    body { display: grid; place-items: center; min-height: 100vh; }
+    .callback {
+      text-align: center;
+      padding: 46px 40px;
+      border-radius: 28px;
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 243, .9);
+      box-shadow: var(--shadow-lg);
+      max-width: 380px;
+      animation: rise .5s var(--ease) both;
+    }
+    .callback .brand { display: inline-block; margin-bottom: 22px; }
+    .callback h1 {
+      font-family: "Playfair Display", serif;
+      font-size: 1.6rem;
+      letter-spacing: -.02em;
+      margin-bottom: 10px;
+    }
+    .callback p { color: var(--muted); font-size: .86rem; line-height: 1.6; }
+    .spinner {
+      width: 34px; height: 34px; margin: 20px auto 0;
+      border-radius: 50%;
+      border: 3px solid #f1e2d5;
+      border-top-color: var(--orange);
+      animation: spin .8s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <main class="callback">
+    <a class="brand" href="../index.html">Mutuals<span>™</span></a>
+    <h1 id="title">Signing you in…</h1>
+    <p id="copy">Checking your account. One second.</p>
+    <div class="spinner" id="spinner"></div>
+  </main>
+
+  <script type="module">
+    // Google sends the user back here. The decision is made from their data,
+    // never from where they came from: existing account with a finished profile
+    // lands in the app, a new account lands in onboarding. That is the whole
+    // point of this page.
+    import { supabase } from '../assets/js/supabase.js';
+    import { resolveLanding } from '../assets/js/auth.js';
+
+    const title = document.getElementById('title');
+    const copy = document.getElementById('copy');
+
+    async function waitForSession() {
+      for (let attempt = 0; attempt < 25; attempt += 1) {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.user) return data.session.user;
+        await new Promise(resolve => setTimeout(resolve, 160));
+      }
+      return null;
+    }
+
+    async function run() {
+      const user = await waitForSession();
+
+      if (!user) {
+        title.textContent = 'Sign-in did not complete';
+        copy.textContent = 'We could not confirm your session. Send yourself back to log in.';
+        document.getElementById('spinner').hidden = true;
+        setTimeout(() => window.location.replace('login.html'), 2200);
+        return;
+      }
+
+      try {
+        const destination = await resolveLanding(user);
+        window.location.replace(destination);
+      } catch (error) {
+        title.textContent = 'Something went wrong';
+        copy.textContent = error.message || 'Please try again.';
+        document.getElementById('spinner').hidden = true;
+      }
+    }
+
+    run();
+  </script>
+</body>
+</html>

@@ -24,14 +24,14 @@
     </a>
 
     <nav class="nav-links" id="navLinks">
-      <a href="#how-it-works">Discover</a>
-      <a href="#about">About</a>
-      <a href="#community">Community</a>
+      <a href="pages/discover.html">Matching</a>
+      <a href="pages/profile.html">Profile</a>
+      <a href="pages/profile.html#settings">Settings</a>
     </nav>
 
     <div class="nav-actions">
-      <a href="pages/login.html" class="login-button">Log in</a>
-      <a href="pages/signup.html" class="nav-join">Create account</a>
+      <a href="pages/login.html" class="login-button" id="navLogin">Log in</a>
+      <a href="pages/signup.html" class="nav-join" id="navJoin">Create account</a>
     </div>
 
     <button class="menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">
@@ -129,5 +129,24 @@
   </footer>
 
   <script src="assets/js/main.js"></script>
+  <script type="module">
+    // Landing page knows who is looking at it. Signed in: the two auth buttons
+    // become one "Open app" door instead of inviting them to sign up twice.
+    import { getCurrentUser } from './assets/js/auth.js';
+
+    const login = document.getElementById('navLogin');
+    const join = document.getElementById('navJoin');
+
+    getCurrentUser()
+      .then(user => {
+        if (!user) return;
+        login.hidden = true;
+        join.textContent = 'Open app →';
+        join.href = 'pages/discover.html';
+      })
+      .catch(() => {
+        /* signed out — leave the default buttons */
+      });
+  </script>
 </body>
 </html>
