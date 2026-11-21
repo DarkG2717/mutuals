@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mutuals — v2</title>
+<style>
+  :root{
+    --peach:#ee7c4c; --peach-dark:#d55f2f; --peach-soft:#ffeade;
+    --ink:#241511; --muted:#8d776c; --line:#efe0d5; --paper:#fffdfb;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#fdf7f2;color:var(--ink);
+    font-family:"DM Sans",-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;
+    overflow:hidden;touch-action:none;
+  }
+  .serif{font-family:"Playfair Display",Georgia,serif}
+
+  /* -------- login -------- */
+  .gate{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:24px;background:#fdf7f2;
+    transition:opacity .4s ease}
+  .gate.gone{opacity:0;pointer-events:none}
+  .gate form{width:min(340px,100%)}
+  .gate h1{font-size:2rem;font-weight:700;letter-spacing:-.03em;margin-bottom:6px}
+  .gate h1 span{color:var(--peach)}
+  .gate p.sub{font-size:.86rem;color:var(--muted);margin-bottom:26px;line-height:1.5}
+  .gate label{display:block;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .gate input{width:100%;font:inherit;font-size:.95rem;padding:13px 15px;border-radius:12px;
+    border:1px solid var(--line);background:#fff;color:var(--ink);outline:none;margin-bottom:14px}
+  .gate input:focus{border-color:var(--peach)}
+  .gate button{width:100%;font:inherit;font-weight:600;font-size:.95rem;padding:15px;border-radius:12px;
+    border:none;background:var(--peach);color:#fff;cursor:pointer}
+  .gate .err{font-size:.78rem;color:#c0392b;min-height:1.2em;margin-top:10px}
+  .gate .hint{margin-top:16px;font-size:.78rem;color:var(--muted)}
+  .gate .hint b{color:var(--ink);font-weight:600}
+  .gate .hint button{width:auto;padding:0;background:none;color:var(--peach-dark);font-size:.78rem;
+    border-bottom:1px solid currentColor;border-radius:0;font-weight:600}
+
+  /* -------- app -------- */
+  .app{width:min(392px,100vw);height:min(820px,100dvh);padding:14px 18px 18px;
+    display:grid;grid-template-rows:auto 1fr auto;gap:14px}
+  .app[hidden]{display:none}
+
+  .hud{display:flex;align-items:center;justify-content:space-between}
+  .hud .mark{font-size:1.05rem;font-weight:700;letter-spacing:-.02em}
+  .hud .mark i{color:var(--peach);font-style:normal}
+  .hud .meta{font-size:.76rem;color:var(--muted)}
+  .hud .meta b{color:var(--ink);font-weight:600}
+  .hud button{font:inherit;font-size:.76rem;color:var(--muted);background:none;border:none;cursor:pointer;
+    margin-left:12px}
+  .hud button:hover{color:var(--ink)}
+
+  .deck-wrap{position:relative;display:grid;place-items:center;min-height:0}
+  .deck{position:relative;width:100%;height:100%;max-height:560px}
+
+  /* the card is just a photo with a quiet caption — nothing else */
+  .card{position:absolute;inset:0;border-radius:24px;overflow:hidden;background:#f0e2d8;
+    box-shadow:0 22px 48px -26px rgba(70,32,16,.42);
+    cursor:grab;user-select:none;-webkit-user-select:none;
+    transition:transform .45s cubic-bezier(.16,1,.3,1),opacity .3s ease;
+    transform-origin:50% 92%}
+  .card.dragging{transition:none;cursor:grabbing}
+  .card.settling{transition:transform .5s cubic-bezier(.16,1,.3,1),opacity .3s ease}
+  .card[data-depth="0"]{z-index:3}
+  .card[data-depth="1"]{z-index:2;transform:translateY(8px) scale(.972);box-shadow:0 14px 30px -24px rgba(70,32,16,.4)}
+  .card[data-depth="2"]{z-index:1;transform:translateY(16px) scale(.945);opacity:0}
+
+  .card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;-webkit-user-drag:none}
+  .card .fallback{position:absolute;inset:0;display:grid;place-items:center;font-family:"Playfair Display",Georgia,serif;
+    font-style:italic;font-size:3.6rem;color:rgba(255,255,255,.8);
+    background:linear-gradient(150deg,#ffd6c1,#ffbf9f)}
+  .card .scrim{position:absolute;inset:auto 0 0 0;height:54%;
+    background:linear-gradient(to top,rgba(24,12,8,.72),rgba(24,12,8,.16) 60%,transparent)}
+
+  .card .cap{position:absolute;inset:auto 0 0 0;padding:0 20px 18px;color:#fff}
+  .card .cap h2{font-family:"Playfair Display",Georgia,serif;font-size:1.6rem;font-weight:700;
+    letter-spacing:-.02em;line-height:1.1}
+  .card .cap h2 span{font-family:"DM Sans",sans-serif;font-weight:400;font-size:1rem;opacity:.8;margin-left:7px}
+
+  .card .cap p.lvl{margin-top:3px;font-size:.76rem;letter-spacing:.04em;color:rgba(255,255,255,.72)}
+
+  .int{margin-top:10px}
+  .int .common{display:block;font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;
+    color:#ffc4a3;font-weight:600;margin-bottom:4px}
+  .int .common.none{color:rgba(255,255,255,.45);font-weight:500}
+  .int .list{font-size:.77rem;line-height:1.5;color:rgba(255,255,255,.55)}
+  .int .list .on{color:#ffb894;font-weight:600}
+  .int .list .sep{opacity:.5;margin:0 5px}
+
+  /* behind cards are photo-only: duplicate captions read as ghosting */
+  .card[data-depth="1"] .cap,.card[data-depth="1"] .pct,
+  .card[data-depth="2"] .cap,.card[data-depth="2"] .pct{visibility:hidden}
+
+  .pct{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.92);color:var(--ink);
+    font-size:.72rem;font-weight:600;padding:6px 11px;border-radius:999px;
+    backdrop-filter:blur(6px);font-variant-numeric:tabular-nums}
+
+  .stamp{position:absolute;top:26px;left:50%;transform:translate(-50%,-8px) rotate(-2deg);
+    font-family:"Playfair Display",Georgia,serif;font-size:1.05rem;letter-spacing:.02em;
+    padding:8px 20px;border-radius:999px;opacity:0;transition:opacity .15s ease;
+    background:rgba(255,255,255,.95);color:var(--ink);z-index:3}
+  .stamp.pass{color:#7d6a60}
+  .stamp.connect{color:#fff;background:var(--peach)}
+
+  /* controls: two round buttons, nothing else */
+  .controls{display:grid;place-items:center;gap:10px}
+  .row{display:flex;align-items:center;gap:22px}
+  .round{width:62px;height:62px;border-radius:50%;border:1px solid var(--line);background:#fff;
+    display:grid;place-items:center;font-size:1.35rem;color:var(--muted);cursor:pointer;
+    transition:transform .16s ease,border-color .2s ease,color .2s ease;
+    box-shadow:0 10px 24px -18px rgba(70,32,16,.7)}
+  .round:hover{border-color:#d9c6b8;color:var(--ink)}
+  .round:active{transform:scale(.94)}
+  .round:disabled{opacity:.35;cursor:default;transform:none}
+  .round.go{background:var(--peach);border-color:var(--peach);color:#fff}
+  .round.go:hover{background:var(--peach-dark);border-color:var(--peach-dark)}
+  .undo{font:inherit;font-size:.75rem;color:var(--muted);background:none;border:none;cursor:pointer;
+    letter-spacing:.02em}
+  .undo:hover{color:var(--ink)}
+  .undo:disabled{opacity:0;cursor:default}
+
+  .hint{font-size:.75rem;color:var(--muted);text-align:center;min-height:1em;margin-top:2px}
+
+  .done{position:absolute;inset:0;display:none;place-items:center;text-align:center;
+    border:1px dashed var(--line);border-radius:24px;background:var(--paper);padding:28px}
+  .done.show{display:grid}
+  .done h2{font-family:"Playfair Display",Georgia,serif;font-size:1.3rem;margin-bottom:6px}
+  .done p{font-size:.84rem;color:var(--muted);line-height:1.5;margin-bottom:16px}
+  .done button{font:inherit;font-size:.84rem;font-weight:600;color:var(--peach-dark);
+    background:none;border:none;cursor:pointer;border-bottom:1px solid currentColor;padding-bottom:2px}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);background:var(--ink);color:#fff9f4;
+    font-size:.8rem;font-weight:500;padding:11px 18px;border-radius:999px;opacity:0;pointer-events:none;
+    transition:opacity .22s ease,transform .28s cubic-bezier(.16,1,.3,1);z-index:40;
+    display:flex;align-items:center;gap:8px}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast button{font:inherit;font-weight:600;color:#ffbf9f;background:none;border:none;cursor:pointer;
+    border-bottom:1px solid rgba(255,191,159,.5);padding:0}
+
+  .mutual{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:rgba(36,21,17,.5);
+    backdrop-filter:blur(8px);opacity:0;transition:opacity .28s ease}
+  .mutual.show{display:grid;opacity:1}
+  .mutual .box{width:min(320px,88vw);background:#fff;border-radius:22px;padding:26px 22px 20px;text-align:center}
+  .mutual h2{font-family:"Playfair Display",Georgia,serif;font-size:1.35rem;margin:14px 0 5px}
+  .mutual p{font-size:.83rem;color:var(--muted);line-height:1.5;margin-bottom:18px}
+  .mutual .faces{display:flex;justify-content:center}
+  .mutual .faces div{width:58px;height:58px;border-radius:50%;overflow:hidden;border:3px solid #fff;
+    background:#ffd6c1;display:grid;place-items:center;font-family:"Playfair Display",Georgia,serif;
+    font-style:italic;color:#fff;font-size:1.2rem}
+  .mutual .faces div img{width:100%;height:100%;object-fit:cover}
+  .mutual .faces div:last-child{margin-left:-16px}
+  .mutual .faces i{width:26px;height:26px;border-radius:50%;background:var(--peach);color:#fff;
+    display:grid;place-items:center;font-style:normal;font-size:.7rem;margin:0 -12px;align-self:center;
+    z-index:2;border:2px solid #fff}
+  .mutual button.primary{width:100%;font:inherit;font-weight:600;font-size:.88rem;padding:13px;
+    border-radius:12px;border:none;background:var(--peach);color:#fff;cursor:pointer;margin-bottom:8px}
+  .mutual button.secondary{width:100%;font:inherit;font-size:.83rem;padding:11px;border-radius:12px;
+    border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer}
+
+  .foot{position:fixed;bottom:5px;left:0;right:0;text-align:center;font-size:.64rem;color:#c9b5a8;
+    letter-spacing:.05em;pointer-events:none}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <form id="gateForm" autocomplete="off">
+    <h1 class="serif">Mutuals<span>.</span></h1>
+    <p class="sub">Test build. Synthetic students, real scoring engine.</p>
+    <label for="user">Username</label>
+    <input id="user" type="text" spellcheck="false" placeholder="kester">
+    <label for="pass">Password</label>
+    <input id="pass" type="password" placeholder="••••••••">
+    <button type="submit">Log in</button>
+    <div class="err" id="gateError"></div>
+    <div class="hint">user <b>kester</b> · pass <b>mutuals2026</b> · <button type="button" id="fillDemo">fill in</button></div>
+  </form>
+</div>
+
+<main class="app" id="app" hidden>
+  <header class="hud">
+    <div class="mark">Mutuals<i>.</i></div>
+    <div class="meta"><b id="remaining">—</b> nearby<button type="button" id="logout">Log out</button></div>
+  </header>
+
+  <div class="deck-wrap">
+    <div class="deck" id="deck"></div>
+    <div class="done" id="done">
+      <div>
+        <h2>That's everyone</h2>
+        <p>You've seen all 60 synthetic students.</p>
+        <button type="button" id="restart">Start again</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="row">
+      <button class="round" type="button" id="passBtn" aria-label="Pass">↑</button>
+      <button class="round go" type="button" id="connectBtn" aria-label="Connect">↓</button>
+    </div>
+    <button class="undo" type="button" id="undoBtn" disabled>undo</button>
+    <div class="hint" id="hint">drag down to connect · up to pass</div>
+  </div>
+</main>
+
+<div class="foot">synthetic data · 60 students · nothing is saved</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="mutual" id="mutual">
+  <div class="box">
+    <div class="faces" id="faces"></div>
+    <h2>It's mutual</h2>
+    <p id="mutualCopy"></p>
+    <button class="primary" type="button" id="mutualChat">Send a message</button>
+    <button class="secondary" type="button" id="mutualKeep">Keep browsing</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- synthetic body ---------- */
+  let seed = 20261120;
+  function rng() { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; }
+
+  const CATALOGUE = [
+    ["Music",100],["Movies",92],["Football",88],["Gaming",80],["Food",78],["Travel",70],
+    ["Fashion",66],["Photography",60],["Reading",55],["Gym",52],["Anime",48],["Afrobeats",46],
+    ["Startups",40],["Coding",38],["Art",34],["Podcasts",30],["Cooking",28],["Basketball",24],
+    ["Poetry",20],["Chess",18],["Film",16],["Design",14],["Volunteering",12],["Debate",10],
+    ["Hiking",9],["Jazz",7],["Thrifting",6],["Astronomy",4],["Beekeeping",2],["Fencing",1]
+  ].map(function (r) { return { name: r[0], weight: r[1] }; });
+
+  const NAMES = ["Ada","Tobi","Zainab","Emeka","Ifeoma","Damilare","Halima","Chidi","Ngozi","Segun",
+    "Fatima","Kelechi","Amaka","Yusuf","Bisi","Tunde","Amarachi","Ibrahim","Temi","Obinna","Simi",
+    "Bashir","Chinaza","Femi","Nneka","Kunle","Aisha","Uche","Dapo","Efe","Rita","Sadiq","Yemi","Zara",
+    "Ify","Musa","Chiamaka","Bola","Gbenga","Nadia","Ope","Suleiman","Adaeze","Fola","Hauwa","Ike",
+    "Jumoke","Kingsley","Lami","Mide","Nanzi","Olamide","Precious","Rauf","Sade","Timilehin","Uzo",
+    "Victoria","Wale","Yinka"];
+
+  const TOTAL_W = CATALOGUE.reduce(function (s, i) { return s + i.weight; }, 0);
+
+  function pickInterests(count) {
+    const out = [], seen = {};
+    let guard = 0;
+    while (out.length < count && guard++ < 400) {
+      let roll = rng() * TOTAL_W;
+      for (let i = 0; i < CATALOGUE.length; i++) {
+        roll -= CATALOGUE[i].weight;
+        if (roll <= 0) {
+          if (!seen[CATALOGUE[i].name]) { seen[CATALOGUE[i].name] = 1; out.push(CATALOGUE[i].name); }
+          break;
+        }
+      }
+    }
+    return out;
+  }
+
+  const VIEWER = { id: "viewer", name: "Kester",
+    interests: ["Music","Startups","Film","Podcasts","Basketball","Design"] };
+
+  const STUDENTS = NAMES.map(function (name, i) {
+    return {
+      id: "s" + i, name: name,
+      age: 18 + Math.floor(rng() * 7),
+      level: (1 + Math.floor(rng() * 6)) * 100,
+      avatar: "https://i.pravatar.cc/600?img=" + ((i % 70) + 1),
+      interests: pickInterests(3 + Math.floor(rng() * 8)),
+      mutual: i % 3 === 0
+    };
+  });
+
+  /* ---------- engine (mirror of assets/js/matching.js) ---------- */
+  const CONFIDENCE_K = 1.2, DISPLAY_EXPONENT = 0.6, TOP_SLICE = 0.7, DECK_SIZE = 16;
+
+  function buildIdfMap(rows) {
+    const m = new Map();
+    rows.forEach(function (r) { if (r.interest_name) m.set(r.interest_name, Number(r.idf) || 0); });
+    return m;
+  }
+  function buildVectors(rows, idfMap) {
+    const v = new Map();
+    rows.forEach(function (r) {
+      let e = v.get(r.user_id);
+      if (!e) { e = { vector: new Map(), norm: 0 }; v.set(r.user_id, e); }
+      const raw = idfMap.get(r.interest_name);
+      e.vector.set(r.interest_name, Number.isFinite(raw) && raw > 0 ? raw : 1);
+    });
+    v.forEach(function (e) {
+      let s = 0; e.vector.forEach(function (w) { s += w * w; }); e.norm = Math.sqrt(s);
+    });
+    return v;
+  }
+  function sharedWeight(a, b) {
+    if (!a || !b) return 0;
+    const small = a.vector.size <= b.vector.size ? a : b;
+    const large = small === a ? b : a;
+    let dot = 0;
+    small.vector.forEach(function (w, n) { const o = large.vector.get(n); if (o !== undefined) dot += w * o; });
+    return dot;
+  }
+  function scorePair(a, b) {
+    if (!a || !b || !a.norm || !b.norm) return 0;
+    const d = a.norm * b.norm;
+    return d ? Math.min(1, Math.max(0, sharedWeight(a, b) / d)) : 0;
+  }
+  function confidenceFactor(w) {
+    const x = Number.isFinite(w) && w > 0 ? w : 0;
+    return x / (x + CONFIDENCE_K);
+  }
+  function percent(score) {
+    const c = Math.min(1, Math.max(0, Number(score) || 0));
+    return Math.round(100 * Math.pow(c, DISPLAY_EXPONENT));
+  }
+  function buildDeck(viewerId, candidates, vectors, size) {
+    const viewer = vectors.get(viewerId);
+    if (!viewer || viewer.vector.size === 0) return [];
+    const scored = [];
+    candidates.forEach(function (p) {
+      const cv = vectors.get(p.id);
+      if (!cv || cv.vector.size === 0) return;
+      const s = scorePair(viewer, cv) * confidenceFactor(sharedWeight(viewer, cv));
+      scored.push({ profile: p, score: s, percent: percent(s) });
+    });
+    scored.sort(function (a, b) { return b.score - a.score; });
+    const topCount = Math.min(scored.length, Math.round(size * TOP_SLICE));
+    const top = scored.slice(0, topCount);
+    const rest = scored.slice(topCount);
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      const t = rest[i]; rest[i] = rest[j]; rest[j] = t;
+    }
+    return top.concat(rest.slice(0, Math.max(0, size - topCount)));
+  }
+
+  const counts = new Map();
+  STUDENTS.concat([VIEWER]).forEach(function (u) {
+    u.interests.forEach(function (n) { counts.set(n, (counts.get(n) || 0) + 1); });
+  });
+  const TOTAL_USERS = STUDENTS.length + 1;
+  const idfMap = buildIdfMap(CATALOGUE.map(function (c) {
+    const n = counts.get(c.name) || 0;
+    return { interest_name: c.name, idf: Math.log(1 + TOTAL_USERS / Math.max(n, 1)) };
+  }));
+  const poolRows = STUDENTS.concat([VIEWER]).reduce(function (rows, u) {
+    u.interests.forEach(function (n) { rows.push({ user_id: u.id, interest_name: n }); });
+    return rows;
+  }, []);
+  const vectors = buildVectors(poolRows, idfMap);
+
+  /* ---------- deck state ---------- */
+  let deck = [], history = [], locked = false, topCard = null;
+
+  const deckEl = document.getElementById("deck");
+  const doneEl = document.getElementById("done");
+  const remainingEl = document.getElementById("remaining");
+  const hintEl = document.getElementById("hint");
+  const toastEl = document.getElementById("toast");
+  const undoBtn = document.getElementById("undoBtn");
+  const passBtn = document.getElementById("passBtn");
+  const connectBtn = document.getElementById("connectBtn");
+  const mutualEl = document.getElementById("mutual");
+  const facesEl = document.getElementById("faces");
+  const mutualCopy = document.getElementById("mutualCopy");
+
+  const THRESHOLD = 100, VELOCITY = 0.5, WHEEL_COMMIT = 120, WHEEL_RESET = 220;
+
+  function clamp(n, lo, hi) { return n < lo ? lo : n > hi ? hi : n; }
+  function initials(name) {
+    return String(name).trim().split(/\s+/).slice(0, 2)
+      .map(function (p) { return p[0].toUpperCase(); }).join("");
+  }
+
+  function makeCard(card) {
+    const p = card.profile;
+    const el = document.createElement("article");
+    el.className = "card";
+    el.dataset.id = p.id;
+
+    const fallback = document.createElement("div");
+    fallback.className = "fallback";
+    fallback.textContent = initials(p.name);
+    el.appendChild(fallback);
+
+    const img = document.createElement("img");
+    img.src = p.avatar;
+    img.alt = "";
+    img.draggable = false;
+    img.addEventListener("load", function () { fallback.style.display = "none"; });
+    img.addEventListener("error", function () { img.remove(); });
+    el.appendChild(img);
+
+    const scrim = document.createElement("div");
+    scrim.className = "scrim";
+    el.appendChild(scrim);
+
+    const pct = document.createElement("div");
+    pct.className = "pct";
+    pct.textContent = card.percent + "%";
+    el.appendChild(pct);
+
+    const cap = document.createElement("div");
+    cap.className = "cap";
+    const h = document.createElement("h2");
+    h.className = "serif";
+    h.innerHTML = p.name + '<span>' + p.age + "</span>";
+    const lvl = document.createElement("p");
+    lvl.className = "lvl";
+    lvl.textContent = p.level + " level";
+    cap.appendChild(h);
+    cap.appendChild(lvl);
+    cap.appendChild(interestsBlock(p));
+    el.appendChild(cap);
+
+    const pass = document.createElement("div");
+    pass.className = "stamp pass";
+    pass.textContent = "Pass";
+    const go = document.createElement("div");
+    go.className = "stamp connect";
+    go.textContent = "Connect";
+    el.appendChild(pass);
+    el.appendChild(go);
+
+    return el;
+  }
+
+  function interestsBlock(profile) {
+    const shared = profile.interests.filter(function (n) {
+      return VIEWER.interests.indexOf(n) !== -1;
+    });
+
+    const wrap = document.createElement("div");
+    wrap.className = "int";
+
+    const common = document.createElement("span");
+    common.className = "common" + (shared.length ? "" : " none");
+    common.textContent = shared.length
+      ? shared.length + " in common"
+      : "nothing in common yet";
+    wrap.appendChild(common);
+
+    const list = document.createElement("span");
+    list.className = "list";
+
+    // shared interests first, so the peach ones read as the headline
+    const ordered = shared.concat(profile.interests.filter(function (n) {
+      return shared.indexOf(n) === -1;
+    }));
+
+    ordered.slice(0, 6).forEach(function (name, i) {
+      if (i) {
+        const sep = document.createElement("span");
+        sep.className = "sep";
+        sep.textContent = "·";
+        list.appendChild(sep);
+      }
+      const word = document.createElement("span");
+      if (shared.indexOf(name) !== -1) word.className = "on";
+      word.textContent = name;
+      list.appendChild(word);
+    });
+
+    wrap.appendChild(list);
+    return wrap;
+  }
+
+  function render() {
+    deckEl.innerHTML = "";
+    deck.slice(0, 3).forEach(function (card, i) {
+      const el = makeCard(card);
+      el.dataset.depth = String(i);
+      deckEl.appendChild(el);
+    });
+    topCard = deckEl.querySelector('[data-depth="0"]');
+    if (topCard) wire(topCard);
+
+    remainingEl.textContent = deck.length;
+    const empty = deck.length === 0;
+    doneEl.classList.toggle("show", empty);
+    passBtn.disabled = empty;
+    connectBtn.disabled = empty;
+    undoBtn.disabled = history.length === 0;
+  }
+
+  function paint(card, dy, dx) {
+    const y = clamp(dy, -520, 520);
+    const x = clamp(dx * 0.15, -60, 60);
+    card.style.transform = "translate3d(" + x.toFixed(1) + "px," + y + "px,0) rotate(" +
+      clamp(x * 0.05, -4, 4).toFixed(2) + "deg)";
+    const pass = card.querySelector(".stamp.pass");
+    const go = card.querySelector(".stamp.connect");
+    if (pass) pass.style.opacity = String(clamp(-y / THRESHOLD, 0, 1));
+    if (go) go.style.opacity = String(clamp(y / THRESHOLD, 0, 1));
+  }
+
+  function wire(card) {
+    let sy = 0, sx = 0, dy = 0, dx = 0, ly = 0, lt = 0, vy = 0, down = false;
+
+    card.addEventListener("pointerdown", function (e) {
+      if (locked) return;
+      down = true; sy = ly = e.clientY; sx = e.clientX; lt = performance.now(); dy = dx = vy = 0;
+      card.classList.add("dragging"); card.classList.remove("settling");
+      try { card.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+
+    card.addEventListener("pointermove", function (e) {
+      if (!down) return;
+      const now = performance.now();
+      dy = e.clientY - sy; dx = e.clientX - sx;
+      const dt = Math.max(1, now - lt);
+      vy = (e.clientY - ly) / dt;
+      ly = e.clientY; lt = now;
+      paint(card, dy, dx);
+      hintEl.textContent = dy > 30 ? "release to connect" : dy < -30 ? "release to pass" : "drag down to connect · up to pass";
+    });
+
+    function end(e) {
+      if (!down) return;
+      down = false;
+      card.classList.remove("dragging");
+      const commit = Math.abs(dy) > THRESHOLD || (Math.abs(vy) > VELOCITY && Math.abs(dy) > 44);
+      if (commit) {
+        decide(dy > 0 ? "connect" : "pass");
+      } else {
+        card.classList.add("settling");
+        paint(card, 0, 0);
+        hintEl.textContent = "drag down to connect · up to pass";
+        setTimeout(function () { card.classList.remove("settling"); }, 520);
+      }
+      dy = dx = 0;
+      if (e && e.pointerId != null && card.hasPointerCapture && card.hasPointerCapture(e.pointerId)) {
+        try { card.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+    }
+    card.addEventListener("pointerup", end);
+    card.addEventListener("pointercancel", end);
+  }
+
+  function decide(choice) {
+    if (locked || !deck.length) return;
+    const card = deck[0];
+    const el = topCard;
+    locked = true;
+    history.push({ card: card, choice: choice });
+
+    if (el) {
+      el.classList.add("settling");
+      const dir = choice === "connect" ? 1 : -1;
+      el.style.transform = "translate3d(0," + dir * 120 + "%,0) rotate(" + dir * 5 + "deg)";
+      el.style.opacity = "0";
+    }
+
+    setTimeout(function () {
+      deck.shift();
+      locked = false;
+      render();
+      hintEl.textContent = "drag down to connect · up to pass";
+      if (choice === "connect") {
+        if (card.profile.mutual) openMutual(card.profile);
+        else toast("Connect sent to " + card.profile.name);
+      } else {
+        toast("Passed on " + card.profile.name, "undo", undo);
+      }
+    }, 280);
+  }
+
+  function undo() {
+    if (!history.length) return;
+    const last = history.pop();
+    deck.unshift(last.card);
+    locked = false;
+    render();
+    toast("Brought back " + last.card.profile.name);
+  }
+
+  let tTimer = null;
+  function toast(text, actionLabel, action) {
+    toastEl.innerHTML = "";
+    toastEl.appendChild(document.createTextNode(text));
+    if (actionLabel) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = actionLabel;
+      b.addEventListener("click", function () { hideToast(); action(); });
+      toastEl.appendChild(b);
+    }
+    toastEl.classList.add("show");
+    clearTimeout(tTimer);
+    tTimer = setTimeout(hideToast, 2800);
+  }
+  function hideToast() { toastEl.classList.remove("show"); clearTimeout(tTimer); }
+
+  function openMutual(p) {
+    facesEl.innerHTML = "";
+    const me = document.createElement("div");
+    me.textContent = "K";
+    const spark = document.createElement("i");
+    spark.textContent = "✳";
+    const them = document.createElement("div");
+    const img = document.createElement("img");
+    img.src = p.avatar; img.alt = "";
+    them.appendChild(img);
+    facesEl.appendChild(me); facesEl.appendChild(spark); facesEl.appendChild(them);
+    mutualCopy.textContent = "You and " + p.name + " both said yes.";
+    mutualEl.classList.add("show");
+  }
+  function closeMutual() { mutualEl.classList.remove("show"); }
+
+  /* wheel */
+  let wAcc = 0, wTimer = null;
+  window.addEventListener("wheel", function (e) {
+    if (mutualEl.classList.contains("show") || !topCard || locked) return;
+    e.preventDefault();
+    wAcc += e.deltaY;
+    paint(topCard, clamp(wAcc * 0.5, -THRESHOLD * 0.9, THRESHOLD * 0.9), 0);
+    clearTimeout(wTimer);
+    wTimer = setTimeout(function () { wAcc = 0; }, WHEEL_RESET);
+    if (wAcc >= WHEEL_COMMIT) { wAcc = 0; decide("connect"); }
+    else if (wAcc <= -WHEEL_COMMIT) { wAcc = 0; decide("pass"); }
+  }, { passive: false });
+
+  /* keys */
+  document.addEventListener("keydown", function (e) {
+    if (mutualEl.classList.contains("show")) { if (e.key === "Escape") closeMutual(); return; }
+    if (document.getElementById("app").hidden) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); decide("connect"); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); decide("pass"); }
+    else if (e.key === "Backspace" || e.key === "ArrowLeft") { e.preventDefault(); undo(); }
+  });
+
+  /* ---------- login ---------- */
+  const CREDS = { user: "kester", pass: "mutuals2026" };
+  const gate = document.getElementById("gate");
+  const app = document.getElementById("app");
+
+  function start() {
+    gate.classList.add("gone");
+    setTimeout(function () { gate.style.display = "none"; }, 400);
+    app.hidden = false;
+    deck = buildDeck(VIEWER.id, STUDENTS, vectors, DECK_SIZE);
+    history = []; locked = false;
+    render();
+  }
+
+  document.getElementById("gateForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const u = document.getElementById("user").value.trim().toLowerCase();
+    const p = document.getElementById("pass").value;
+    const err = document.getElementById("gateError");
+    if (u === CREDS.user && p === CREDS.pass) { err.textContent = ""; start(); }
+    else err.textContent = "Wrong username or password.";
+  });
+
+  document.getElementById("fillDemo").addEventListener("click", function () {
+    document.getElementById("user").value = CREDS.user;
+    document.getElementById("pass").value = CREDS.pass;
+    document.getElementById("gateError").textContent = "";
+  });
+
+  document.getElementById("logout").addEventListener("click", function () {
+    deck = []; deckEl.innerHTML = ""; app.hidden = true;
+    gate.style.display = "grid"; requestAnimationFrame(function () { gate.classList.remove("gone"); });
+  });
+
+  document.getElementById("restart").addEventListener("click", function () {
+    deck = buildDeck(VIEWER.id, STUDENTS, vectors, DECK_SIZE);
+    history = []; locked = false; render();
+  });
+
+  passBtn.addEventListener("click", function () { decide("pass"); });
+  connectBtn.addEventListener("click", function () { decide("connect"); });
+  undoBtn.addEventListener("click", undo);
+  document.getElementById("mutualChat").addEventListener("click", function () {
+    closeMutual(); toast("Chat isn't part of this build");
+  });
+  document.getElementById("mutualKeep").addEventListener("click", closeMutual);
+  mutualEl.addEventListener("click", function (e) { if (e.target === mutualEl) closeMutual(); });
+
+  if (location.hash === "#demo") start();
+})();
+</script>
+</body>
+</html>

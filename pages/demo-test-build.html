@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mutuals — test build</title>
+<style>
+  :root {
+    --peach-50:#fff8f4; --peach-100:#ffeade; --peach-200:#ffd6c1; --peach-300:#ffbf9f;
+    --peach-500:#ee7c4c; --peach-600:#d55f2f;
+    --white:#fff; --ink:#291813; --ink-soft:#6f584f; --muted:#a08a7f; --line:#f2e1d6;
+    --r-card:30px;
+    --shadow-card:0 28px 60px -30px rgba(88,42,22,.45), 0 4px 14px -8px rgba(88,42,22,.22);
+    --ease-out:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(120% 70% at 50% -10%,var(--peach-100) 0%,transparent 62%),
+               radial-gradient(80% 50% at 100% 100%,#ffe6d6 0%,transparent 60%),var(--peach-50);
+    color:var(--ink);font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;
+    overflow:hidden;touch-action:none;
+  }
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E")}
+
+  .serif{font-family:"Playfair Display",Georgia,serif}
+
+  /* ---------- gate ---------- */
+  .gate{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:22px;
+    background:radial-gradient(90% 60% at 50% 0%,#ffe9dc 0%,transparent 70%),var(--peach-50);
+    transition:opacity .45s ease,transform .45s var(--ease-out)}
+  .gate.gone{opacity:0;transform:scale(1.02);pointer-events:none}
+
+  .gate-card{width:min(360px,100%);background:var(--white);border-radius:26px;padding:30px 26px 24px;
+    box-shadow:0 40px 80px -46px rgba(88,42,22,.55),0 2px 8px -4px rgba(88,42,22,.14)}
+
+  .gate-brand{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+  .gate-brand sup{font-size:.5em;color:var(--peach-500);top:-.6em}
+  .gate-sub{font-size:.85rem;color:var(--ink-soft);margin-bottom:22px;line-height:1.5}
+
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:6px}
+  .field input{width:100%;font:inherit;font-size:.95rem;padding:13px 15px;border-radius:14px;
+    border:1px solid var(--line);background:var(--peach-50);color:var(--ink);outline:none;
+    transition:border-color .2s ease,background .2s ease}
+  .field input:focus{border-color:var(--peach-300);background:#fff}
+
+  .gate-btn{width:100%;font:inherit;font-weight:600;font-size:.95rem;padding:15px;border-radius:999px;
+    border:none;background:var(--peach-500);color:#fff;cursor:pointer;margin-top:8px;
+    box-shadow:0 16px 30px -18px rgba(238,124,76,.9);transition:transform .16s var(--ease-out),background .2s}
+  .gate-btn:active{transform:scale(.985)}
+  .gate-btn:hover{background:var(--peach-600)}
+
+  .gate-hint{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);
+    font-size:.78rem;color:var(--ink-soft);line-height:1.7}
+  .gate-hint b{color:var(--ink);font-weight:600;letter-spacing:.01em}
+  .gate-hint button{font:inherit;font-size:.78rem;font-weight:600;color:var(--peach-600);
+    background:none;border:none;cursor:pointer;border-bottom:1px solid currentColor;padding:0}
+  .gate-error{font-size:.8rem;color:#c0392b;margin-top:10px;min-height:1.1em}
+
+  /* ---------- app ---------- */
+  .app{position:relative;width:min(430px,100vw);height:min(860px,100dvh);padding:16px 20px 20px;
+    display:grid;grid-template-rows:auto 1fr auto auto;gap:11px;z-index:1}
+  .app[hidden]{display:none}
+
+  .hud{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 0}
+  .brand{font-size:1.2rem;font-weight:700;letter-spacing:-.015em}
+  .brand sup{font-size:.55em;color:var(--peach-500);top:-.55em}
+  .hud-right{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--ink-soft)}
+  .counter{background:var(--white);border:1px solid var(--line);border-radius:999px;padding:6px 12px;
+    font-variant-numeric:tabular-nums;box-shadow:0 6px 16px -12px rgba(88,42,22,.5)}
+  .counter b{color:var(--peach-600);font-weight:600}
+  .icon-btn{background:transparent;border:1px solid transparent;border-radius:999px;padding:6px 10px;
+    font:inherit;font-size:.78rem;color:var(--muted);cursor:pointer}
+  .icon-btn:hover{color:var(--ink);border-color:var(--line);background:#fff}
+
+  .deck-wrap{position:relative;display:flex;align-items:center;justify-content:center;min-height:0}
+  .deck{position:relative;width:100%;height:100%;max-height:600px}
+
+  .card{position:absolute;inset:0;background:var(--white);border-radius:var(--r-card);
+    box-shadow:var(--shadow-card);overflow:hidden;display:flex;flex-direction:column;
+    will-change:transform,opacity;transform-origin:50% 90%;
+    transition:transform .5s var(--ease-out),opacity .32s ease;
+    cursor:grab;user-select:none;-webkit-user-select:none}
+  .card.dragging{transition:none;cursor:grabbing}
+  .card.settling{transition:transform .55s var(--ease-out),opacity .3s ease}
+  .card[data-depth="1"]{transform:translateY(15px) scale(.958);box-shadow:0 18px 40px -26px rgba(88,42,22,.4)}
+  .card[data-depth="2"]{transform:translateY(28px) scale(.916);box-shadow:0 14px 30px -26px rgba(88,42,22,.3)}
+  .card[data-depth="3"]{transform:translateY(38px) scale(.885);opacity:0}
+
+  .photo{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;
+    background:linear-gradient(150deg,var(--peach-200),var(--peach-300) 55%,#ffd9c4)}
+  .photo img{width:100%;height:100%;object-fit:cover;display:block;-webkit-user-drag:none;pointer-events:none}
+  .initials{position:absolute;inset:0;display:grid;place-items:center;font-family:"Playfair Display",Georgia,serif;
+    font-style:italic;font-size:4.4rem;color:rgba(255,255,255,.75)}
+  .photo::after{content:"";position:absolute;inset:auto 0 0 0;height:58%;pointer-events:none;
+    background:linear-gradient(to top,rgba(30,14,8,.74),rgba(30,14,8,.2) 55%,transparent)}
+  .photo-meta{position:absolute;inset:auto 0 0 0;padding:16px 20px 15px;color:#fff;z-index:2}
+  .name-row{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .name{font-family:"Playfair Display",Georgia,serif;font-size:1.72rem;font-weight:700;
+    letter-spacing:-.02em;line-height:1.05}
+  .age{font-size:1.06rem;opacity:.9}
+  .where{margin-top:5px;font-size:.81rem;color:rgba(255,255,255,.87);display:flex;align-items:center;
+    gap:7px;flex-wrap:wrap}
+  .dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.6}
+
+  .match{position:absolute;top:15px;left:15px;z-index:2;background:rgba(255,255,255,.95);
+    border-radius:999px;padding:8px 13px 8px 11px;display:flex;align-items:center;gap:6px;
+    font-size:.78rem;font-weight:600;box-shadow:0 8px 20px -14px rgba(0,0,0,.6);font-variant-numeric:tabular-nums}
+  .match .spark{color:var(--peach-500);font-size:.95rem;line-height:1}
+
+  .pips{position:absolute;top:18px;right:15px;z-index:2;display:flex;gap:4px}
+  .pips i{width:15px;height:3px;border-radius:2px;background:rgba(255,255,255,.45)}
+  .pips i.on{background:#fff}
+
+  .body{flex:0 0 auto;padding:15px 19px 17px;background:var(--white);display:grid;gap:11px}
+  .why{font-size:.85rem;line-height:1.5;color:var(--ink-soft)}
+  .why b{color:var(--peach-600);font-weight:600}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-size:.73rem;font-weight:500;color:var(--ink-soft);background:var(--peach-50);
+    border:1px solid var(--line);border-radius:999px;padding:5px 10px;white-space:nowrap}
+  .tag.shared{color:var(--peach-600);background:rgba(238,124,76,.09);border-color:rgba(238,124,76,.22)}
+
+  .veil{position:absolute;inset:0;display:grid;place-items:center;opacity:0;
+    transition:opacity .18s ease;pointer-events:none;z-index:3}
+  .veil span{font-family:"Playfair Display",Georgia,serif;font-size:1.65rem;padding:12px 26px;
+    border-radius:999px;border:2px solid currentColor}
+  .veil-connect{background:linear-gradient(to top,rgba(238,124,76,.92),rgba(238,124,76,.35) 70%,transparent);color:#fff}
+  .veil-connect span{border-color:#fff;background:rgba(255,255,255,.14);transform:rotate(-4deg)}
+  .veil-pass{background:linear-gradient(to bottom,rgba(243,239,233,.95),rgba(243,239,233,.4) 70%,transparent);color:#8a7a70}
+  .veil-pass span{border-color:#8a7a70;background:rgba(255,255,255,.5);transform:rotate(4deg)}
+
+  .rail{position:relative;height:28px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .rail-text{font-size:.77rem;letter-spacing:.02em;color:var(--muted);display:flex;align-items:center;
+    gap:8px;transition:opacity .3s ease}
+  .rail-text .arrow{color:var(--peach-500)}
+  .rail-decision{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    gap:8px;font-size:.81rem;font-weight:600}
+  .rail-decision.show{display:flex}
+  .rail-decision.going-connect{color:var(--peach-600)}
+  .rail-decision.going-pass{color:#8a7a70}
+
+  .controls{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+  .btn{font:inherit;font-size:.85rem;font-weight:500;border-radius:999px;border:1px solid var(--line);
+    background:var(--white);color:var(--ink-soft);padding:13px 17px;cursor:pointer;display:flex;
+    align-items:center;gap:7px;white-space:nowrap;transition:transform .18s var(--ease-out),border-color .2s,color .2s}
+  .btn:hover{border-color:var(--peach-300);color:var(--ink)}
+  .btn:active{transform:scale(.97)}
+  .btn:disabled{opacity:.4;cursor:default;transform:none}
+  .btn-ghost{background:transparent;border-color:transparent;padding:13px 11px}
+  .btn-ghost:hover{background:rgba(255,255,255,.6);border-color:var(--line)}
+  .btn-connect{background:var(--peach-500);border-color:var(--peach-500);color:#fff;justify-content:center;
+    font-weight:600;box-shadow:0 16px 28px -16px rgba(238,124,76,.85)}
+  .btn-connect:hover{background:var(--peach-600);border-color:var(--peach-600);color:#fff}
+
+  .empty{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:30px;
+    background:rgba(255,255,255,.75);border:1px dashed var(--peach-200);border-radius:var(--r-card)}
+  .empty.show{display:grid}
+  .empty h2{font-family:"Playfair Display",Georgia,serif;font-size:1.35rem;margin-bottom:8px}
+  .empty p{font-size:.86rem;color:var(--ink-soft);line-height:1.6;max-width:26ch;margin:0 auto}
+  .empty button{margin-top:16px;font:inherit;font-size:.84rem;font-weight:600;color:var(--peach-600);
+    background:none;border:none;border-bottom:1px solid currentColor;padding:0 0 2px;cursor:pointer}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,18px);background:var(--ink);
+    color:#fff6f0;font-size:.83rem;font-weight:500;padding:12px 20px;border-radius:999px;opacity:0;
+    pointer-events:none;transition:opacity .25s ease,transform .3s var(--ease-out);z-index:40;
+    display:flex;align-items:center;gap:9px}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast button{font:inherit;font-weight:600;color:var(--peach-300);background:none;border:none;
+    cursor:pointer;border-bottom:1px solid rgba(255,191,159,.5);padding:0}
+
+  .mutual{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:rgba(41,24,19,.55);
+    backdrop-filter:blur(10px);opacity:0;transition:opacity .3s ease}
+  .mutual.show{display:grid;opacity:1}
+  .mutual-card{width:min(330px,88vw);background:#fff;border-radius:26px;padding:28px 24px 22px;
+    text-align:center;transform:translateY(14px) scale(.97);transition:transform .45s var(--ease-out)}
+  .mutual.show .mutual-card{transform:none}
+  .avatars{display:flex;justify-content:center;margin-bottom:14px}
+  .avatars .a{width:64px;height:64px;border-radius:50%;border:3px solid #fff;overflow:hidden;
+    background:linear-gradient(150deg,var(--peach-200),var(--peach-300));display:grid;place-items:center;
+    color:#fff;font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:1.3rem}
+  .avatars .a img{width:100%;height:100%;object-fit:cover}
+  .avatars .spark{width:28px;height:28px;border-radius:50%;background:var(--peach-500);color:#fff;
+    display:grid;place-items:center;font-size:.75rem;margin:0 -13px;align-self:center;z-index:2;border:2px solid #fff}
+  .mutual h2{font-family:"Playfair Display",Georgia,serif;font-size:1.4rem;margin-bottom:5px}
+  .mutual p{font-size:.85rem;color:var(--ink-soft);line-height:1.55;margin-bottom:18px}
+  .mutual-actions{display:grid;gap:8px}
+  .mutual-actions .primary{font:inherit;font-weight:600;font-size:.88rem;padding:13px;border-radius:999px;
+    border:none;background:var(--peach-500);color:#fff;cursor:pointer}
+  .mutual-actions .secondary{font:inherit;font-size:.84rem;padding:11px;border-radius:999px;
+    background:transparent;border:1px solid var(--line);color:var(--ink-soft);cursor:pointer}
+
+  .foot{position:fixed;left:0;right:0;bottom:4px;text-align:center;font-size:.66rem;color:#c3ad9f;
+    letter-spacing:.04em;pointer-events:none;z-index:2}
+
+  @media (max-height:720px){
+    .app{padding:12px 15px 14px;gap:8px}
+    .body{padding:12px 17px 13px;gap:8px}
+    .name{font-size:1.5rem}
+    .rail{height:22px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ---------------- login gate ---------------- -->
+<div class="gate" id="gate">
+  <form class="gate-card" id="gateForm" autocomplete="off">
+    <div class="gate-brand serif">Mutuals<sup>™</sup></div>
+    <p class="gate-sub">Test build. Synthetic students, real scoring engine — the percentages come from the actual matcher.</p>
+
+    <div class="field">
+      <label for="user">Username</label>
+      <input id="user" name="user" type="text" placeholder="kester" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="pass">Password</label>
+      <input id="pass" name="pass" type="password" placeholder="••••••••">
+    </div>
+
+    <button class="gate-btn" type="submit">Log in</button>
+    <div class="gate-error" id="gateError"></div>
+
+    <div class="gate-hint">
+      Demo credentials — user <b>kester</b>, pass <b>mutuals2026</b>
+      <button type="button" id="fillDemo">fill them in</button>
+    </div>
+  </form>
+</div>
+
+<!-- ---------------- app ---------------- -->
+<main class="app" id="app" hidden>
+  <header class="hud">
+    <div class="brand serif">Mutuals<sup>™</sup></div>
+    <div class="hud-right">
+      <span class="counter"><b id="remaining">—</b> nearby</span>
+      <button class="icon-btn" type="button" id="logout">Log out</button>
+    </div>
+  </header>
+
+  <div class="deck-wrap">
+    <div class="deck" id="deck" aria-live="polite"></div>
+    <div class="empty" id="empty">
+      <div>
+        <h2>That's everyone for now</h2>
+        <p>Synthetic deck exhausted. Reset to run through it again.</p>
+        <button type="button" id="restart">Reset the deck</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="rail" id="rail">
+    <div class="rail-text" id="railText">
+      <span class="arrow">↓</span> scroll down to connect <span class="arrow">↑</span> up to pass
+    </div>
+    <div class="rail-decision" id="railDecision"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-ghost" type="button" id="undoBtn" aria-label="Undo last decision">
+      <span>↺</span> Undo
+    </button>
+    <button class="btn" type="button" id="passBtn"><span>↑</span> Pass</button>
+    <button class="btn btn-connect" type="button" id="connectBtn">Connect <span>↓</span></button>
+  </div>
+</main>
+
+<div class="foot" id="foot">synthetic data · 60 students · k = 1.2 · nothing is saved</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="mutual" id="mutual" role="dialog" aria-modal="true">
+  <div class="mutual-card">
+    <div class="avatars" id="mutualAvatars"></div>
+    <h2>It's mutual</h2>
+    <p id="mutualCopy">You both said yes.</p>
+    <div class="mutual-actions">
+      <button class="primary" type="button" id="mutualChat">Send a message</button>
+      <button class="secondary" type="button" id="mutualKeep">Keep browsing</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ==========================================================
+     1. SYNTHETIC STUDENT BODY
+     Deterministic: same seed, same deck every reload.
+     ========================================================== */
+  const SEED = 20261120;
+  let seed = SEED;
+  function rng() {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  }
+
+  const CATALOGUE = [
+    ["Music", 100], ["Movies", 92], ["Football", 88], ["Gaming", 80], ["Food", 78],
+    ["Travel", 70], ["Fashion", 66], ["Photography", 60], ["Reading", 55], ["Gym", 52],
+    ["Anime", 48], ["Afrobeats", 46], ["Startups", 40], ["Coding", 38], ["Art", 34],
+    ["Podcasts", 30], ["Cooking", 28], ["Basketball", 24], ["Poetry", 20], ["Chess", 18],
+    ["Film", 16], ["Design", 14], ["Volunteering", 12], ["Debate", 10], ["Hiking", 9],
+    ["Jazz", 7], ["Thrifting", 6], ["Astronomy", 4], ["Beekeeping", 2], ["Fencing", 1]
+  ].map(function (row) { return { name: row[0], weight: row[1] }; });
+
+  const NAMES = [
+    "Ada", "Tobi", "Zainab", "Emeka", "Ifeoma", "Damilare", "Halima", "Chidi",
+    "Ngozi", "Segun", "Fatima", "Kelechi", "Amaka", "Yusuf", "Bisi", "Tunde",
+    "Amarachi", "Ibrahim", "Temi", "Obinna", "Simi", "Bashir", "Chinaza", "Femi",
+    "Nneka", "Kunle", "Aisha", "Uche", "Dapo", "Efe", "Rita", "Sadiq",
+    "Yemi", "Zara", "Ify", "Musa", "Chiamaka", "Bola", "Gbenga", "Nadia",
+    "Ope", "Suleiman", "Adaeze", "Fola", "Hauwa", "Ike", "Jumoke", "Kingsley",
+    "Lami", "Mide", "Nanzi", "Olamide", "Precious", "Rauf", "Sade", "Timilehin",
+    "Uzo", "Victoria", "Wale", "Yinka"
+  ];
+
+  const SCHOOLS = ["Unilag", "OAU", "UNN", "ABU Zaria", "Covenant", "FUTA", "Uniport",
+                   "BUK", "UNIBEN", "LASU", "UI", "UNILORIN"];
+  const HALLS = ["Moremi", "Zik", "Esther", "Awolowo", "Amina", "North", "Rivers",
+                 "Suleiman", "Jaja", "Mellanby"];
+
+  const TOTAL_WEIGHT = CATALOGUE.reduce(function (sum, i) { return sum + i.weight; }, 0);
+
+  function pickInterests(count) {
+    const chosen = [];
+    const seen = {};
+    let guard = 0;
+    while (chosen.length < count && guard < 400) {
+      guard += 1;
+      let roll = rng() * TOTAL_WEIGHT;
+      for (let i = 0; i < CATALOGUE.length; i += 1) {
+        roll -= CATALOGUE[i].weight;
+        if (roll <= 0) {
+          if (!seen[CATALOGUE[i].name]) {
+            seen[CATALOGUE[i].name] = true;
+            chosen.push(CATALOGUE[i].name);
+          }
+          break;
+        }
+      }
+    }
+    return chosen;
+  }
+
+  const VIEWER = {
+    id: "viewer",
+    name: "Kester",
+    interests: ["Music", "Startups", "Film", "Podcasts", "Basketball", "Design"]
+  };
+
+  const STUDENTS = NAMES.map(function (name, index) {
+    return {
+      id: "s" + index,
+      name: name,
+      age: 18 + Math.floor(rng() * 7),
+      school: SCHOOLS[Math.floor(rng() * SCHOOLS.length)],
+      level: (1 + Math.floor(rng() * 6)) * 100 + " level",
+      hall: HALLS[Math.floor(rng() * HALLS.length)],
+      avatar: "https://i.pravatar.cc/600?img=" + ((index % 70) + 1),
+      interests: pickInterests(3 + Math.floor(rng() * 8)),
+      mutual: index % 3 === 0
+    };
+  });
+
+  /* ==========================================================
+     2. MATCHING ENGINE — mirror of assets/js/matching.js
+     (inlined so the file runs from file:// with no server)
+     ========================================================== */
+  const CONFIDENCE_K = 1.2;
+  const DISPLAY_EXPONENT = 0.6;
+  const TOP_SLICE = 0.7;
+  const DECK_SIZE = 16;
+
+  function buildIdfMap(rows) {
+    const map = new Map();
+    rows.forEach(function (row) {
+      if (!row.interest_name) return;
+      map.set(row.interest_name, Number(row.idf) || 0);
+    });
+    return map;
+  }
+
+  function buildVectors(rows, idfMap) {
+    const vectors = new Map();
+    rows.forEach(function (row) {
+      let entry = vectors.get(row.user_id);
+      if (!entry) {
+        entry = { vector: new Map(), norm: 0 };
+        vectors.set(row.user_id, entry);
+      }
+      const raw = idfMap.get(row.interest_name);
+      const weight = Number.isFinite(raw) && raw > 0 ? raw : 1;
+      entry.vector.set(row.interest_name, weight);
+    });
+    vectors.forEach(function (entry) {
+      let sum = 0;
+      entry.vector.forEach(function (weight) { sum += weight * weight; });
+      entry.norm = Math.sqrt(sum);
+    });
+    return vectors;
+  }
+
+  function sharedWeight(a, b) {
+    if (!a || !b) return 0;
+    const small = a.vector.size <= b.vector.size ? a : b;
+    const large = small === a ? b : a;
+    let dot = 0;
+    small.vector.forEach(function (weight, name) {
+      const other = large.vector.get(name);
+      if (other !== undefined) dot += weight * other;
+    });
+    return dot;
+  }
+
+  function scorePair(a, b) {
+    if (!a || !b || !a.norm || !b.norm) return 0;
+    const denominator = a.norm * b.norm;
+    if (!denominator) return 0;
+    return Math.min(1, Math.max(0, sharedWeight(a, b) / denominator));
+  }
+
+  function confidenceFactor(weight, k) {
+    const w = Number.isFinite(weight) && weight > 0 ? weight : 0;
+    const knob = Number.isFinite(k) && k > 0 ? k : CONFIDENCE_K;
+    return w / (w + knob);
+  }
+
+  function compatibilityPercent(score) {
+    const clamped = Math.min(1, Math.max(0, Number(score) || 0));
+    return Math.round(100 * Math.pow(clamped, DISPLAY_EXPONENT));
+  }
+
+  function buildDeck(viewerId, candidates, vectors, size) {
+    const viewer = vectors.get(viewerId);
+    if (!viewer || viewer.vector.size === 0) return [];
+
+    const scored = [];
+    candidates.forEach(function (profile) {
+      const candidate = vectors.get(profile.id);
+      if (!candidate || candidate.vector.size === 0) return;
+      const raw = scorePair(viewer, candidate);
+      const score = raw * confidenceFactor(sharedWeight(viewer, candidate));
+      scored.push({ profile: profile, score: score, percent: compatibilityPercent(score), raw: raw });
+    });
+
+    scored.sort(function (a, b) { return b.score - a.score; });
+
+    const topCount = Math.min(scored.length, Math.round(size * TOP_SLICE));
+    const top = scored.slice(0, topCount);
+    const rest = scored.slice(topCount);
+
+    // explore slice, shuffled
+    for (let i = rest.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rng() * (i + 1));
+      const tmp = rest[i]; rest[i] = rest[j]; rest[j] = tmp;
+    }
+    return top.concat(rest.slice(0, Math.max(0, size - topCount)));
+  }
+
+  /* ---- idf over this synthetic population, same formula as the SQL ---- */
+  const counts = new Map();
+  STUDENTS.concat([VIEWER]).forEach(function (user) {
+    user.interests.forEach(function (name) { counts.set(name, (counts.get(name) || 0) + 1); });
+  });
+  const TOTAL_USERS = STUDENTS.length + 1;
+  const statsRows = CATALOGUE.map(function (interest) {
+    const n = counts.get(interest.name) || 0;
+    return {
+      interest_name: interest.name,
+      idf: Math.log(1 + TOTAL_USERS / Math.max(n, 1))
+    };
+  });
+
+  const idfMap = buildIdfMap(statsRows);
+  const poolRows = STUDENTS.concat([VIEWER]).reduce(function (rows, user) {
+    user.interests.forEach(function (name) {
+      rows.push({ user_id: user.id, interest_name: name });
+    });
+    return rows;
+  }, []);
+  const vectors = buildVectors(poolRows, idfMap);
+
+  /* ==========================================================
+     3. RUN THE DECK
+     ========================================================== */
+  let deck = [];
+  let history = [];
+  let locked = false;
+  let topCard = null;
+
+  const deckEl = document.getElementById("deck");
+  const emptyEl = document.getElementById("empty");
+  const remainingEl = document.getElementById("remaining");
+  const railText = document.getElementById("railText");
+  const railDecision = document.getElementById("railDecision");
+  const toastEl = document.getElementById("toast");
+  const undoBtn = document.getElementById("undoBtn");
+  const passBtn = document.getElementById("passBtn");
+  const connectBtn = document.getElementById("connectBtn");
+  const mutualEl = document.getElementById("mutual");
+  const mutualAvatars = document.getElementById("mutualAvatars");
+  const mutualCopy = document.getElementById("mutualCopy");
+
+  const THRESHOLD = 110;
+  const VELOCITY_COMMIT = 0.55;
+  const WHEEL_COMMIT = 130;
+  const WHEEL_RESET = 220;
+
+  let wheelAcc = 0;
+  let wheelTimer = null;
+
+  function clamp(n, lo, hi) { return n < lo ? lo : n > hi ? hi : n; }
+
+  function initialsOf(name) {
+    return String(name || "?").trim().split(/\s+/).slice(0, 2)
+      .map(function (part) { return part[0].toUpperCase(); }).join("");
+  }
+
+  function buildCard(card) {
+    const profile = card.profile;
+    const el = document.createElement("article");
+    el.className = "card";
+    el.dataset.id = profile.id;
+
+    const photo = document.createElement("div");
+    photo.className = "photo";
+
+    const fallback = document.createElement("div");
+    fallback.className = "initials";
+    fallback.textContent = initialsOf(profile.name);
+    photo.appendChild(fallback);
+
+    const img = document.createElement("img");
+    img.alt = "";
+    img.draggable = false;
+    img.src = profile.avatar;
+    img.addEventListener("load", function () { fallback.style.display = "none"; });
+    img.addEventListener("error", function () { img.remove(); });
+    photo.appendChild(img);
+
+    const badge = document.createElement("div");
+    badge.className = "match";
+    badge.innerHTML = '<span class="spark">✳</span><span>' + card.percent + "% match</span>";
+    photo.appendChild(badge);
+
+    const pips = document.createElement("div");
+    pips.className = "pips";
+    for (let i = 0; i < 3; i += 1) {
+      const pip = document.createElement("i");
+      if (i === 0) pip.className = "on";
+      pips.appendChild(pip);
+    }
+    photo.appendChild(pips);
+
+    const meta = document.createElement("div");
+    meta.className = "photo-meta";
+    const nameRow = document.createElement("div");
+    nameRow.className = "name-row";
+    const name = document.createElement("h2");
+    name.className = "name";
+    name.textContent = profile.name;
+    const age = document.createElement("span");
+    age.className = "age";
+    age.textContent = profile.age;
+    nameRow.appendChild(name);
+    nameRow.appendChild(age);
+    meta.appendChild(nameRow);
+
+    const where = document.createElement("div");
+    where.className = "where";
+    [profile.school, profile.level, profile.hall].forEach(function (part, i) {
+      if (i) {
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        where.appendChild(dot);
+      }
+      const span = document.createElement("span");
+      span.textContent = part;
+      where.appendChild(span);
+    });
+    meta.appendChild(where);
+    photo.appendChild(meta);
+
+    const veilPass = document.createElement("div");
+    veilPass.className = "veil veil-pass";
+    veilPass.innerHTML = "<span>Pass</span>";
+    const veilConnect = document.createElement("div");
+    veilConnect.className = "veil veil-connect";
+    veilConnect.innerHTML = "<span>Connect</span>";
+    photo.appendChild(veilPass);
+    photo.appendChild(veilConnect);
+
+    const body = document.createElement("div");
+    body.className = "body";
+
+    const why = document.createElement("p");
+    why.className = "why";
+    why.innerHTML = reasonFor(card);
+    body.appendChild(why);
+
+    const tags = document.createElement("div");
+    tags.className = "tags";
+    profile.interests.slice(0, 6).forEach(function (name) {
+      const tag = document.createElement("span");
+      const shared = VIEWER.interests.indexOf(name) !== -1;
+      tag.className = "tag" + (shared ? " shared" : "");
+      tag.textContent = name;
+      tags.appendChild(tag);
+    });
+    body.appendChild(tags);
+
+    el.appendChild(photo);
+    el.appendChild(body);
+    return el;
+  }
+
+  function reasonFor(card) {
+    const shared = card.profile.interests.filter(function (name) {
+      return VIEWER.interests.indexOf(name) !== -1;
+    });
+    if (!shared.length) {
+      return "Nothing in common on paper — this one arrived from the explore slice.";
+    }
+    if (shared.length === 1) {
+      return "One thing in common: <b>" + shared[0] + "</b>. Thin evidence, so the score stays honest.";
+    }
+    const head = shared.slice(0, 2).map(function (n) { return "<b>" + n + "</b>"; }).join(" and ");
+    const tail = shared.length > 2 ? " plus " + (shared.length - 2) + " more" : "";
+    return "You both like " + head + tail + ".";
+  }
+
+  function renderStack() {
+    deckEl.innerHTML = "";
+    deck.slice(0, 4).forEach(function (card, index) {
+      const el = buildCard(card);
+      el.dataset.depth = String(index);
+      deckEl.appendChild(el);
+    });
+    topCard = deckEl.querySelector('[data-depth="0"]');
+    if (topCard) wireDrag(topCard);
+
+    remainingEl.textContent = String(deck.length);
+    const empty = deck.length === 0;
+    emptyEl.classList.toggle("show", empty);
+    passBtn.disabled = empty;
+    connectBtn.disabled = empty;
+    undoBtn.disabled = history.length === 0;
+  }
+
+  function paint(card, dy, dx) {
+    const y = clamp(dy, -520, 520);
+    const x = clamp(dx * 0.18, -70, 70);
+    const rot = clamp(dx * 0.02, -5, 5) + clamp(y * -0.012, -3.5, 3.5);
+    card.style.transform = "translate3d(" + x.toFixed(1) + "px," + y + "px,0) rotate(" + rot.toFixed(2) + "deg)";
+    const vc = card.querySelector(".veil-connect");
+    const vp = card.querySelector(".veil-pass");
+    if (vc) vc.style.opacity = String(clamp(Math.max(0, y) / THRESHOLD, 0, 1));
+    if (vp) vp.style.opacity = String(clamp(Math.max(0, -y) / THRESHOLD, 0, 1));
+    reflect(y);
+  }
+
+  function reflect(y) {
+    if (y > 34) {
+      railDecision.className = "rail-decision show going-connect";
+      railDecision.textContent = "↓ release to connect";
+      railText.style.opacity = "0";
+    } else if (y < -34) {
+      railDecision.className = "rail-decision show going-pass";
+      railDecision.textContent = "↑ release to pass";
+      railText.style.opacity = "0";
+    } else {
+      railDecision.className = "rail-decision";
+      railDecision.textContent = "";
+      railText.style.opacity = "";
+    }
+  }
+
+  function wireDrag(card) {
+    let startY = 0, startX = 0, dy = 0, dx = 0;
+    let lastY = 0, lastT = 0, vy = 0, dragging = false;
+
+    card.addEventListener("pointerdown", function (e) {
+      if (locked) return;
+      dragging = true;
+      startY = lastY = e.clientY;
+      startX = e.clientX;
+      lastT = performance.now();
+      dy = dx = vy = 0;
+      card.classList.add("dragging");
+      card.classList.remove("settling");
+      try { card.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+
+    card.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      const now = performance.now();
+      dy = e.clientY - startY;
+      dx = e.clientX - startX;
+      const dt = Math.max(1, now - lastT);
+      vy = (e.clientY - lastY) / dt;
+      lastY = e.clientY;
+      lastT = now;
+      paint(card, dy, dx);
+    });
+
+    function end(e) {
+      if (!dragging) return;
+      dragging = false;
+      card.classList.remove("dragging");
+
+      const flick = Math.abs(vy) > VELOCITY_COMMIT;
+      const commit = Math.abs(dy) > THRESHOLD || (flick && Math.abs(dy) > 46);
+
+      if (commit) {
+        decide(dy > 0 ? "connect" : "pass");
+      } else {
+        card.classList.add("settling");
+        paint(card, 0, 0);
+        railDecision.className = "rail-decision";
+        railDecision.textContent = "";
+        railText.style.opacity = "";
+        setTimeout(function () { card.classList.remove("settling"); }, 600);
+      }
+      dy = dx = 0;
+      if (e && e.pointerId != null && card.hasPointerCapture && card.hasPointerCapture(e.pointerId)) {
+        try { card.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+    }
+
+    card.addEventListener("pointerup", end);
+    card.addEventListener("pointercancel", end);
+  }
+
+  function decide(decision) {
+    if (locked || !deck.length) return;
+    const card = deck[0];
+    const el = topCard;
+    locked = true;
+    history.push({ card: card, decision: decision });
+
+    if (el) {
+      el.classList.add("settling");
+      const dir = decision === "connect" ? 1 : -1;
+      const veil = el.querySelector(decision === "connect" ? ".veil-connect" : ".veil-pass");
+      if (veil) veil.style.opacity = "1";
+      el.style.transform = "translate3d(0," + (dir * 130) + "%,0) rotate(" + (dir * 6) + "deg)";
+      el.style.opacity = "0";
+    }
+
+    railDecision.className = "rail-decision";
+    railDecision.textContent = "";
+    railText.style.opacity = "";
+
+    setTimeout(function () {
+      deck.shift();
+      locked = false;
+      renderStack();
+      if (decision === "connect") {
+        if (card.profile.mutual) openMutual(card.profile);
+        else showToast("Connect sent to " + card.profile.name + " · " + card.percent + "%");
+      } else {
+        showToast("Passed on " + card.profile.name, "Undo", undo);
+      }
+    }, 290);
+  }
+
+  function undo() {
+    if (!history.length) return;
+    const last = history.pop();
+    deck.unshift(last.card);
+    locked = false;
+    renderStack();
+    showToast("Brought back " + last.card.profile.name);
+  }
+
+  let toastTimer = null;
+  function showToast(text, actionLabel, action) {
+    toastEl.innerHTML = "";
+    toastEl.appendChild(document.createTextNode(text));
+    if (actionLabel && action) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = actionLabel;
+      b.addEventListener("click", function () { hideToast(); action(); });
+      toastEl.appendChild(b);
+    }
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 3000);
+  }
+  function hideToast() {
+    toastEl.classList.remove("show");
+    clearTimeout(toastTimer);
+  }
+
+  function openMutual(profile) {
+    mutualAvatars.innerHTML = "";
+    const me = document.createElement("div");
+    me.className = "a";
+    me.textContent = "K";
+    const spark = document.createElement("div");
+    spark.className = "spark";
+    spark.textContent = "✳";
+    const them = document.createElement("div");
+    them.className = "a";
+    const img = document.createElement("img");
+    img.src = profile.avatar;
+    img.alt = "";
+    them.appendChild(img);
+    mutualAvatars.appendChild(me);
+    mutualAvatars.appendChild(spark);
+    mutualAvatars.appendChild(them);
+    mutualCopy.textContent = "You and " + profile.name + " both said yes. Say something worth replying to.";
+    mutualEl.classList.add("show");
+  }
+  function closeMutual() { mutualEl.classList.remove("show"); }
+
+  /* ---- wheel ---- */
+  window.addEventListener("wheel", function (e) {
+    if (mutualEl.classList.contains("show") || !topCard || locked) return;
+    e.preventDefault();
+    wheelAcc += e.deltaY;
+    paint(topCard, clamp(wheelAcc * 0.55, -THRESHOLD * 0.95, THRESHOLD * 0.95), 0);
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(function () { wheelAcc = 0; }, WHEEL_RESET);
+    if (wheelAcc >= WHEEL_COMMIT) { wheelAcc = 0; decide("connect"); }
+    else if (wheelAcc <= -WHEEL_COMMIT) { wheelAcc = 0; decide("pass"); }
+  }, { passive: false });
+
+  /* ---- keyboard ---- */
+  document.addEventListener("keydown", function (e) {
+    if (mutualEl.classList.contains("show")) {
+      if (e.key === "Escape") closeMutual();
+      return;
+    }
+    if (document.getElementById("app").hidden) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); decide("connect"); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); decide("pass"); }
+    else if (e.key === "Backspace" || e.key === "ArrowLeft") { e.preventDefault(); undo(); }
+  });
+
+  /* ==========================================================
+     4. LOGIN + BOOT
+     ========================================================== */
+  const CREDS = { user: "kester", pass: "mutuals2026" };
+
+  const gate = document.getElementById("gate");
+  const gateForm = document.getElementById("gateForm");
+  const gateError = document.getElementById("gateError");
+  const app = document.getElementById("app");
+
+  function startApp() {
+    gate.classList.add("gone");
+    setTimeout(function () { gate.style.display = "none"; }, 450);
+    app.hidden = false;
+
+    deck = buildDeck(VIEWER.id, STUDENTS, vectors, DECK_SIZE);
+    history = [];
+    locked = false;
+    renderStack();
+  }
+
+  gateForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const user = document.getElementById("user").value.trim().toLowerCase();
+    const pass = document.getElementById("pass").value;
+
+    if (user === CREDS.user && pass === CREDS.pass) {
+      gateError.textContent = "";
+      startApp();
+    } else {
+      gateError.textContent = "Wrong username or password. The demo pair is printed below.";
+    }
+  });
+
+  document.getElementById("fillDemo").addEventListener("click", function () {
+    document.getElementById("user").value = CREDS.user;
+    document.getElementById("pass").value = CREDS.pass;
+    gateError.textContent = "";
+  });
+
+  document.getElementById("logout").addEventListener("click", function () {
+    deck = [];
+    deckEl.innerHTML = "";
+    app.hidden = true;
+    gate.style.display = "grid";
+    requestAnimationFrame(function () { gate.classList.remove("gone"); });
+  });
+
+  document.getElementById("restart").addEventListener("click", function () {
+    deck = buildDeck(VIEWER.id, STUDENTS, vectors, DECK_SIZE);
+    history = [];
+    locked = false;
+    renderStack();
+  });
+
+  passBtn.addEventListener("click", function () { decide("pass"); });
+  connectBtn.addEventListener("click", function () { decide("connect"); });
+  undoBtn.addEventListener("click", undo);
+  document.getElementById("mutualChat").addEventListener("click", function () {
+    closeMutual();
+    showToast("Chat isn't part of this build");
+  });
+  document.getElementById("mutualKeep").addEventListener("click", closeMutual);
+  mutualEl.addEventListener("click", function (e) {
+    if (e.target === mutualEl) closeMutual();
+  });
+
+  // #demo skips the gate — handy for screenshots and repeat testing
+  if (location.hash === "#demo") startApp();
+})();
+</script>
+</body>
+</html>

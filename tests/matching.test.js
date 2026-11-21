@@ -161,8 +161,11 @@ test("deck mix lands near 70/30 on a 200 candidate fixture", () => {
 
   assert.equal(top.length, 70);
   assert.equal(explore.length, 30);
-  assert.ok(top.every(card => card.score === 1), "top slice should be the strongest pairs");
+  // score is confidence-adjusted now, so the ranked slice is "everything that
+  // shares the interest" rather than a literal 1.0.
+  assert.ok(top.every(card => card.score > 0), "top slice should be the strongest pairs");
   assert.ok(explore.every(card => card.score === 0), "explore slice should be drawn from the remainder");
+  assert.ok(top[top.length - 1].score >= explore[0].score, "ranked slice must outrank the explore tail");
   assert.equal(new Set(deck.map(card => card.profile.id)).size, 100, "no duplicate cards");
 });
 

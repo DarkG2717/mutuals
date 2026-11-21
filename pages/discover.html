@@ -50,6 +50,7 @@
       </div>
 
       <div class="deck-actions" id="deckActions" hidden>
+        <button class="action-button undo" type="button" id="undoButton" disabled>Undo</button>
         <button class="action-button pass" type="button" id="passButton">Pass</button>
         <button class="action-button like" type="button" id="likeButton">Like</button>
       </div>
@@ -82,6 +83,7 @@
       actions: document.getElementById('deckActions'),
       pass: document.getElementById('passButton'),
       like: document.getElementById('likeButton'),
+      undo: document.getElementById('undoButton'),
       empty: document.getElementById('emptyState'),
       emptyTitle: document.getElementById('emptyTitle'),
       emptyCopy: document.getElementById('emptyCopy'),
@@ -95,6 +97,12 @@
     let viewerId = null;
     let viewerInterests = new Set();
     let busy = false;
+
+    // A decision is held locally for a short window before it is written.
+    // That is what makes Undo possible: there is no row to delete, and a match
+    // can never be created and then revoked.
+    const UNDO_WINDOW_MS = 8000;
+    let pending = null; // { card, decision, timer }
 
     function setStatus(text) {
       els.status.textContent = text || '';
@@ -287,6 +295,45 @@
       showNext();
     }
 
+    /**
+     * Writes a decision for real. Errors are reported but never freeze the deck —
+     * the card has already left the screen by the time this runs.
+     */
+    async function persist(card, decision) {
+      const { error } = await supabase.from('swipes').insert({
+        swiper_id: viewerId,
+        swiped_id: card.profile.id,
+        decision
+      });
+
+      if (error) {
+        // 23505 = already swiped in a previous session; the deck is simply stale.
+        if (error.code !== '23505') toast(error.message);
+        return;
+      }
+
+      if (decision !== 'like') return;
+
+      const { data: match } = await supabase
+        .from('matches')
+        .select('id')
+        .or(`and(user_one.eq.${viewerId},user_two.eq.${card.profile.id}),and(user_one.eq.${card.profile.id},user_two.eq.${viewerId})`)
+        .maybeSingle();
+
+      if (match) {
+        toast(`It's a match with ${card.profile.full_name || 'someone'} ✳`);
+      }
+    }
+
+    async function commitPending() {
+      if (!pending) return;
+      const { card, decision, timer } = pending;
+      clearTimeout(timer);
+      pending = null;
+      els.undo.disabled = true;
+      await persist(card, decision);
+    }
+
     async function decide(decision) {
       if (busy || !deck.length) return;
       busy = true;
@@ -295,42 +342,50 @@
 
       const card = deck[0];
 
-      const { error } = await supabase.from('swipes').insert({
-        swiper_id: viewerId,
-        swiped_id: card.profile.id,
-        decision
-      });
-
-      if (error) {
-        toast(error.message);
-        els.pass.disabled = false;
-        els.like.disabled = false;
-        busy = false;
-        return;
-      }
+      // The previous decision becomes final the moment you move on.
+      await commitPending();
 
       deck.shift();
-
-      if (decision === 'like') {
-        const { data: match } = await supabase
-          .from('matches')
-          .select('id')
-          .or(`user_one.eq.${card.profile.id},user_two.eq.${card.profile.id}`)
-          .maybeSingle();
-
-        if (match) {
-          toast(`It's a match with ${card.profile.full_name || 'someone'} ✳`);
-        }
-      }
-
       showNext();
+
+      pending = {
+        card,
+        decision,
+        timer: setTimeout(() => { commitPending(); }, UNDO_WINDOW_MS)
+      };
+      els.undo.disabled = false;
+
       els.pass.disabled = false;
       els.like.disabled = false;
       busy = false;
     }
 
+    function undo() {
+      if (busy || !pending) return;
+      const { card, timer } = pending;
+      clearTimeout(timer);
+      pending = null;
+      els.undo.disabled = true;
+      deck.unshift(card);
+      showNext();
+      toast(`Brought back ${card.profile.full_name || 'that profile'}`);
+    }
+
     els.pass.addEventListener('click', () => decide('pass'));
     els.like.addEventListener('click', () => decide('like'));
+    els.undo.addEventListener('click', undo);
+
+    // Never lose a decision to a closed tab: commit as the page goes away.
+    window.addEventListener('pagehide', () => {
+      if (!pending) return;
+      const { card, decision } = pending;
+      pending = null;
+      supabase.from('swipes').insert({
+        swiper_id: viewerId,
+        swiped_id: card.profile.id,
+        decision
+      });
+    });
 
     els.logout.addEventListener('click', async () => {
       await supabase.auth.signOut();

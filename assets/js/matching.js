@@ -14,6 +14,18 @@ export const EXPLORE_SLICE = 0.3;
 export const DEFAULT_DECK_SIZE = 20;
 
 /**
+ * Confidence knob. A cosine score can only be as trustworthy as the evidence
+ * behind it: two users sharing a single interest always score 1.0 no matter how
+ * common that interest is. Dividing that evidence down by (weight + K) turns
+ * "one thing in common" into a mediocre match and leaves four or five genuine
+ * overlaps near their real score.
+ *
+ * Higher K = pickier product. 1.2 was chosen deliberately: no pair can display
+ * 100%, and the badge only goes high when the overlap is wide.
+ */
+export const CONFIDENCE_K = 1.2;
+
+/**
  * @param {Array<{user_id?: string, userId?: string, interest_name?: string, interestName?: string}>} poolRows
  * @param {Map<string, number>} idfMap interest name -> idf weight
  * @returns {Map<string, {vector: Map<string, number>, norm: number}>}
@@ -32,7 +44,11 @@ export function buildInterestVectors(poolRows, idfMap = new Map()) {
       vectors.set(userId, entry);
     }
 
-    const weight = idfMap.has(name) ? idfMap.get(name) : 1;
+    // interest_stats.idf defaults to 0 and is only filled by the nightly refresh.
+    // A 0 (or NaN/negative) weight would zero the vector norm and silently score
+    // every pair 0%, so an unusable weight falls back to the neutral 1.
+    const raw = idfMap.get(name);
+    const weight = Number.isFinite(raw) && raw > 0 ? raw : 1;
     entry.vector.set(name, weight);
   }
 
@@ -46,6 +62,38 @@ export function buildInterestVectors(poolRows, idfMap = new Map()) {
 }
 
 /**
+ * Rarity-weighted overlap: the dot product of the two vectors, i.e. how much
+ * weight the pair actually has in common. This is the "evidence" the cosine
+ * score is built from, and the input to confidenceFactor.
+ * @param {{vector: Map<string, number>, norm: number}} a
+ * @param {{vector: Map<string, number>, norm: number}} b
+ * @returns {number}
+ */
+export function sharedWeight(a, b) {
+  if (!a || !b) return 0;
+  const [small, large] = a.vector.size <= b.vector.size ? [a, b] : [b, a];
+  let dot = 0;
+  for (const [name, weight] of small.vector) {
+    const other = large.vector.get(name);
+    if (other !== undefined) dot += weight * other;
+  }
+  return dot;
+}
+
+/**
+ * Shrinks a score towards zero when the shared evidence is thin.
+ * One shared common interest -> ~0.29. Four shared common interests -> ~0.62.
+ * @param {number} weight rarity-weighted overlap (see sharedWeight)
+ * @param {number} k
+ * @returns {number} 0..1
+ */
+export function confidenceFactor(weight, k = CONFIDENCE_K) {
+  const w = Number.isFinite(weight) && weight > 0 ? weight : 0;
+  const knob = Number.isFinite(k) && k > 0 ? k : CONFIDENCE_K;
+  return w / (w + knob);
+}
+
+/**
  * Cosine similarity between two interest vectors. Symmetric, bounded 0..1.
  * @param {{vector: Map<string, number>, norm: number}} a
  * @param {{vector: Map<string, number>, norm: number}} b
@@ -54,14 +102,7 @@ export function buildInterestVectors(poolRows, idfMap = new Map()) {
 export function scorePair(a, b) {
   if (!a || !b || !a.norm || !b.norm) return 0;
 
-  const [small, large] = a.vector.size <= b.vector.size ? [a, b] : [b, a];
-
-  let dot = 0;
-  for (const [name, weight] of small.vector) {
-    const other = large.vector.get(name);
-    if (other !== undefined) dot += weight * other;
-  }
-
+  const dot = sharedWeight(a, b);
   const denominator = a.norm * b.norm;
   if (denominator === 0) return 0;
 
@@ -71,13 +112,29 @@ export function scorePair(a, b) {
 /**
  * Turns a 0..1 score into the percentage shown on the card.
  * The curve lifts the low band so a genuine 0.31 pair doesn't read as rejection.
+ *
+ * Deliberately single-argument: an earlier version took the exponent as a second
+ * positional parameter, which made `scores.map(compatibilityPercent)` silently
+ * pass the array index as the exponent. Tune the curve with
+ * `compatibilityPercentWith` instead, and leave this one safe to pass around.
+ *
+ * @param {number} score
+ * @returns {number} integer 0..100
+ */
+export function compatibilityPercent(score) {
+  return compatibilityPercentWith(score, DISPLAY_EXPONENT);
+}
+
+/**
+ * Same curve, explicit exponent. For tuning runs and audits only.
  * @param {number} score
  * @param {number} exponent
  * @returns {number} integer 0..100
  */
-export function compatibilityPercent(score, exponent = DISPLAY_EXPONENT) {
+export function compatibilityPercentWith(score, exponent = DISPLAY_EXPONENT) {
   const clamped = Math.min(1, Math.max(0, Number(score) || 0));
-  return Math.round(100 * Math.pow(clamped, exponent));
+  const power = Number.isFinite(exponent) && exponent > 0 ? exponent : DISPLAY_EXPONENT;
+  return Math.round(100 * Math.pow(clamped, power));
 }
 
 /**
@@ -144,7 +201,7 @@ export function buildDeck(viewerId, candidates, vectors, options = {}) {
     const candidateVector = vectors.get(id);
     if (!candidateVector || candidateVector.vector.size === 0) continue;
 
-    const score = scorePair(viewer, candidateVector);
+    const score = scorePair(viewer, candidateVector) * confidenceFactor(sharedWeight(viewer, candidateVector));
     scored.push({ profile, score, percent: compatibilityPercent(score) });
   }
 
