@@ -78,10 +78,11 @@
     } from '../assets/js/matching.js';
 
     const DECK_SIZE = 20;
-    const THRESHOLD = 110;        // px of travel that commits a decision
-    const VELOCITY_COMMIT = 0.55; // px/ms flick commits a decision
-    const WHEEL_COMMIT = 130;     // accumulated wheel delta that commits
-    const WHEEL_RESET = 220;      // ms of quiet before the wheel accumulator resets
+    const THRESHOLD = 150;        // px of deliberate travel that commits
+    const DEAD_ZONE = 14;         // px before a press counts as a drag at all
+    const MIN_DRAG_MS = 90;       // a faster commit than this is treated as a twitch
+    const FLICK_VELOCITY = 1.1;   // px/ms — must be a real flick, not a jitter
+    const FLICK_MIN_TRAVEL = 70;  // px of travel a flick still has to cover
 
     const els = {
       status: document.getElementById('deckStatus'),
@@ -465,33 +466,48 @@
 
     function wireDrag() {
       const card = els.card;
+      let armed = false; // pointer is down but has not passed the dead zone yet
+      let dragging = false;
       let startY = 0;
       let startX = 0;
       let lastY = 0;
       let lastT = 0;
+      let startT = 0;
       let vy = 0;
       let dy = 0;
       let dx = 0;
-      let dragging = false;
 
       card.onpointerdown = e => {
-        if (locked || busy || e.button === 2) return;
-        dragging = true;
+        if (locked || busy || e.button !== 0) return;
+        armed = true;
+        dragging = false;
         startY = lastY = e.clientY;
         startX = e.clientX;
-        lastT = performance.now();
+        startT = lastT = performance.now();
         dy = dx = vy = 0;
-        card.classList.add('dragging');
         card.classList.remove('settling');
         try { card.setPointerCapture(e.pointerId); } catch (_) {}
       };
 
       card.onpointermove = e => {
-        if (!dragging) return;
-        const now = performance.now();
+        if (!armed) return;
+
         dy = e.clientY - startY;
         dx = e.clientX - startX;
 
+        // Nothing happens until the pointer has actually travelled. Without this
+        // dead zone a click, a jitter or a stray mouse move at page load reads as
+        // a swipe.
+        if (!dragging) {
+          if (Math.hypot(dx, dy) < DEAD_ZONE) return;
+          dragging = true;
+          card.classList.add('dragging');
+          startT = performance.now();
+          lastY = e.clientY;
+          lastT = startT;
+        }
+
+        const now = performance.now();
         const dt = Math.max(1, now - lastT);
         vy = (e.clientY - lastY) / dt;
         lastY = e.clientY;
@@ -501,21 +517,31 @@
       };
 
       function end(e) {
-        if (!dragging) return;
+        if (!armed) return;
+        armed = false;
+
+        const wasDragging = dragging;
         dragging = false;
         card.classList.remove('dragging');
 
-        const flick = Math.abs(vy) > VELOCITY_COMMIT;
-        const commit = Math.abs(dy) > THRESHOLD || (flick && Math.abs(dy) > 46);
+        const elapsed = Math.max(1, performance.now() - startT);
+        const travelled = Math.abs(dy);
 
-        if (commit) {
+        const deliberate = travelled > THRESHOLD && elapsed > MIN_DRAG_MS;
+        const flick = Math.abs(vy) > FLICK_VELOCITY
+          && travelled > FLICK_MIN_TRAVEL
+          && elapsed > MIN_DRAG_MS;
+
+        if (wasDragging && (deliberate || flick)) {
           decide(dy > 0 ? 'like' : 'pass');
         } else {
-          card.classList.add('settling');
-          paint(0, 0);
-          els.veilLike.style.opacity = '0';
-          els.veilPass.style.opacity = '0';
-          setTimeout(() => card.classList.remove('settling'), 600);
+          if (wasDragging) {
+            card.classList.add('settling');
+            paint(0, 0);
+            els.veilLike.style.opacity = '0';
+            els.veilPass.style.opacity = '0';
+            setTimeout(() => card.classList.remove('settling'), 600);
+          }
         }
 
         dy = dx = 0;
@@ -528,31 +554,11 @@
       card.onpointercancel = end;
     }
 
-    /* ---------- wheel: trackpad / mouse scroll is the same gesture ---------- */
-    let wheelAcc = 0;
-    let wheelTimer = null;
-
-    window.addEventListener('wheel', e => {
-      if (els.card.hidden || locked || busy) return;
-      e.preventDefault();
-
-      wheelAcc += e.deltaY;
-      const preview = clamp(wheelAcc * 0.55, -THRESHOLD * 0.95, THRESHOLD * 0.95);
-      paint(preview, 0);
-
-      clearTimeout(wheelTimer);
-      wheelTimer = setTimeout(() => { wheelAcc = 0; }, WHEEL_RESET);
-
-      if (wheelAcc >= WHEEL_COMMIT) {
-        wheelAcc = 0;
-        decide('like');
-      } else if (wheelAcc <= -WHEEL_COMMIT) {
-        wheelAcc = 0;
-        decide('pass');
-      }
-    }, { passive: false });
-
-    /* ---------- keyboard ---------- */
+    /* ---------- keyboard only ----------
+       There is deliberately no wheel gesture. A window-level wheel handler with
+       preventDefault turned ordinary page scrolling into likes and passes, which
+       is the worst possible failure mode for this screen. Dragging and the arrow
+       keys are the only decisions. */
     document.addEventListener('keydown', e => {
       if (e.key === 'ArrowDown') { e.preventDefault(); decide('like'); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); decide('pass'); }
