@@ -9,12 +9,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/discover.css">
+  <link rel="stylesheet" href="../assets/css/polish.css">
 </head>
 <body>
   <header class="discover-bar">
     <a class="brand" href="../index.html">Mutuals<span>™</span></a>
     <div class="bar-actions">
       <a class="messages-link" href="messages.html" id="messagesLink">Messages</a>
+      <a class="profile-link" href="profile.html">Profile</a>
       <span id="viewerName"></span>
       <button type="button" id="logoutButton">Log out</button>
     </div>
@@ -267,6 +269,25 @@
 
       viewerId = user.id;
       els.viewerName.textContent = user.email || '';
+
+      // A photo is compulsory: no photo, no deck. Enforced here and in
+      // get_interest_pool() so a stale cached page cannot bypass it either.
+      const { data: ownProfile } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!ownProfile?.avatar_url) {
+        setStatus('');
+        showEmpty(
+          'Add a photo to start',
+          'Profiles without a photo stay hidden — nobody can decide on someone they cannot see. Add yours and your deck unlocks instantly.',
+          'Add your photo'
+        );
+        els.emptyLink.href = 'profile.html#photo';
+        return;
+      }
 
       const [profilesResult, poolResult, statsResult, swipesResult, blocksResult, ownResult] =
         await Promise.all([

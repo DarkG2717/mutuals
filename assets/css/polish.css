@@ -1,0 +1,157 @@
+/* MUTUALS — shared polish layer.
+   Additive only: nothing here changes layout, it changes how the product feels.
+   Included last on every page so it can lift whatever that page already built. */
+
+:root {
+  --aurora-a: rgba(233, 140, 112, .38);
+  --aurora-b: rgba(244, 174, 66, .30);
+  --aurora-c: rgba(255, 214, 193, .55);
+}
+
+/* A warm, moving light behind the whole product. Fixed so it never scrolls
+   away from the content it is lighting. */
+body {
+  background-image:
+    radial-gradient(1100px 640px at 8% -12%, var(--aurora-a) 0%, transparent 58%),
+    radial-gradient(900px 560px at 98% 0%, var(--aurora-b) 0%, transparent 55%),
+    radial-gradient(760px 520px at 62% 108%, var(--aurora-c) 0%, transparent 62%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+::selection { background: #f7c9b2; color: #37180f; }
+
+/* Quiet, warm scrollbar — visible, never shouting. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #e6c3ab transparent;
+}
+
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: #e6c3ab;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: #d9a684; }
+
+/* ---------- headers ---------- */
+
+.discover-bar,
+.messages-bar {
+  position: relative;
+}
+
+.discover-bar::after,
+.messages-bar::after {
+  content: "";
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #f0d9c6 18%, #f0d9c6 82%, transparent);
+}
+
+.brand {
+  transition: letter-spacing .35s cubic-bezier(.16, 1, .3, 1), color .2s;
+}
+
+.brand:hover { letter-spacing: .005em; }
+
+.brand span {
+  color: var(--orange);
+  transition: transform .3s cubic-bezier(.16, 1, .3, 1);
+  display: inline-block;
+}
+
+.brand:hover span { transform: translateY(-2px) rotate(8deg); }
+
+/* Any nav item that is a link or a button gets the same pill language. */
+.bar-actions a {
+  padding: 8px 15px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--brown);
+  font-size: .86rem;
+  transition: color .2s, background .25s cubic-bezier(.16, 1, .3, 1), border-color .2s;
+}
+
+.bar-actions a:hover {
+  color: var(--orange);
+  background: rgba(255, 250, 243, .9);
+  border-color: #f0dccb;
+}
+
+.messages-link { font-weight: 500; }
+
+/* Log out is the quiet one on purpose: it stays secondary until hovered. */
+.bar-actions button {
+  transition: border-color .2s, color .2s, background .2s, transform .25s cubic-bezier(.16, 1, .3, 1);
+}
+
+.bar-actions button:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 250, 243, .95);
+}
+
+/* ---------- surfaces ---------- */
+
+.panel {
+  transition: box-shadow .35s cubic-bezier(.16, 1, .3, 1), border-color .3s;
+}
+
+.panel:hover { border-color: #eed6c3; }
+
+.profile-card {
+  /* Never transform this one: the drag gesture owns its transform. */
+  transition: box-shadow .4s cubic-bezier(.16, 1, .3, 1);
+}
+
+.profile-card:hover {
+  box-shadow: 0 32px 70px -34px rgba(55, 24, 15, .55);
+}
+
+/* ---------- the match moment ---------- */
+
+.match-toast {
+  transition: transform .45s cubic-bezier(.16, 1, .3, 1), opacity .3s ease;
+}
+
+/* ---------- type rhythm ---------- */
+
+.panel-title,
+.deck-status {
+  letter-spacing: -.005em;
+}
+
+.empty-note,
+.deck-status,
+.placeholder p {
+  color: #8c766c;
+}
+
+/* ---------- focus, for keyboard users ---------- */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ---------- motion budget ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Your Mutuals profile — photo, bio and the interests that find your people.">
+  <title>Your profile | Mutuals™</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/profile.css">
+</head>
+<body>
+  <header class="app-bar">
+    <a class="brand" href="../index.html">Mutuals<span>™</span></a>
+
+    <nav class="app-nav" aria-label="Main">
+      <a href="discover.html">Discover</a>
+      <a href="messages.html">Messages</a>
+      <a class="active" href="profile.html" aria-current="page">Profile</a>
+    </nav>
+
+    <div class="bar-actions">
+      <button type="button" class="ghost-button" id="logoutTop">Log out</button>
+    </div>
+  </header>
+
+  <main class="profile-shell">
+    <!-- ============ identity ============ -->
+    <section class="identity-card" id="photo">
+      <div class="cover"><span class="cover-spark">✳</span></div>
+
+      <div class="identity-body">
+        <div class="avatar-wrap empty" id="avatarWrap">
+          <span class="avatar-ring" aria-hidden="true"></span>
+          <img id="avatarImage" alt="Your profile photo" hidden>
+          <span class="avatar-initials" id="avatarInitials">·</span>
+          <button type="button" class="avatar-edit" id="avatarButton" aria-label="Add or change your photo">📷</button>
+          <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp" hidden>
+        </div>
+
+        <h1 id="profileName">Your profile</h1>
+        <p class="handle" id="profileHandle">Loading…</p>
+
+        <div class="meta-pills" id="metaPills"></div>
+
+        <p class="photo-warning" id="photoWarning" hidden>
+          <strong>A photo is required.</strong> Profiles without one are hidden from
+          Discover — nobody can swipe on someone they cannot see. Add yours above.
+        </p>
+
+        <dl class="stats">
+          <div>
+            <dt>Connections</dt>
+            <dd id="statConnections">—</dd>
+          </div>
+          <div>
+            <dt>Interests</dt>
+            <dd id="statInterests">—</dd>
+          </div>
+          <div>
+            <dt>Complete</dt>
+            <dd id="statComplete">—</dd>
+          </div>
+        </dl>
+
+        <div class="strength" role="presentation">
+          <div class="strength-fill" id="strengthFill"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ panels ============ -->
+    <div class="panel-stack">
+      <section class="panel" style="--delay:.06s">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">In your own words</p>
+            <h2>Bio</h2>
+          </div>
+          <span class="counter" id="bioCounter">0 / 160</span>
+        </header>
+
+        <textarea id="bioInput" maxlength="160" rows="3"
+          placeholder="One line that says something true about you. What you're into, what you're building, what you'd talk about at 2am."></textarea>
+
+        <div class="panel-actions">
+          <p class="panel-note" id="bioNote">Shown on your card in Discover.</p>
+          <button type="button" class="primary" id="saveBio" disabled>Save bio</button>
+        </div>
+      </section>
+
+      <section class="panel" style="--delay:.12s">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">What finds your people</p>
+            <h2>Interests</h2>
+          </div>
+          <button type="button" class="link-button" id="toggleInterests">Edit</button>
+        </header>
+
+        <div class="chip-grid" id="interestGrid">
+          <p class="chip-empty">Loading your interests…</p>
+        </div>
+
+        <div class="panel-actions" id="interestActions" hidden>
+          <p class="panel-note" id="interestNote">Minimum 5. Matching is interests-only, so this is the whole algorithm.</p>
+          <button type="button" class="primary" id="saveInterests" disabled>Save changes</button>
+        </div>
+      </section>
+
+      <section class="panel" style="--delay:.18s">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">The boring, important part</p>
+            <h2>Settings</h2>
+          </div>
+        </header>
+
+        <ul class="settings-list">
+          <li>
+            <div>
+              <strong>Profile photo</strong>
+              <small>Required before you appear in Discover.</small>
+            </div>
+            <button type="button" class="ghost-button" id="settingsPhoto">Change</button>
+          </li>
+          <li>
+            <div>
+              <strong>Email</strong>
+              <small>The address you signed in with.</small>
+            </div>
+            <span class="value" id="settingsEmail">—</span>
+          </li>
+          <li>
+            <div>
+              <strong>Password</strong>
+              <small>Reset it through your email.</small>
+            </div>
+            <a class="link-button" href="login.html">Reset</a>
+          </li>
+          <li>
+            <div>
+              <strong>Session</strong>
+              <small>Signing out keeps your profile and matches.</small>
+            </div>
+            <button type="button" class="danger" id="logoutSettings">Log out</button>
+          </li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import { supabase } from '../assets/js/supabase.js';
+
+    const MINIMUM_INTERESTS = 5;
+    const BIO_LIMIT = 160;
+    const AVATAR_PX = 800;
+
+    const els = {
+      avatarWrap: document.getElementById('avatarWrap'),
+      avatarImage: document.getElementById('avatarImage'),
+      avatarInitials: document.getElementById('avatarInitials'),
+      avatarButton: document.getElementById('avatarButton'),
+      avatarInput: document.getElementById('avatarInput'),
+      name: document.getElementById('profileName'),
+      handle: document.getElementById('profileHandle'),
+      pills: document.getElementById('metaPills'),
+      photoWarning: document.getElementById('photoWarning'),
+      statConnections: document.getElementById('statConnections'),
+      statInterests: document.getElementById('statInterests'),
+      statComplete: document.getElementById('statComplete'),
+      strengthFill: document.getElementById('strengthFill'),
+      bioInput: document.getElementById('bioInput'),
+      bioCounter: document.getElementById('bioCounter'),
+      bioNote: document.getElementById('bioNote'),
+      saveBio: document.getElementById('saveBio'),
+      interestGrid: document.getElementById('interestGrid'),
+      interestActions: document.getElementById('interestActions'),
+      interestNote: document.getElementById('interestNote'),
+      toggleInterests: document.getElementById('toggleInterests'),
+      saveInterests: document.getElementById('saveInterests'),
+      settingsPhoto: document.getElementById('settingsPhoto'),
+      settingsEmail: document.getElementById('settingsEmail'),
+      logoutTop: document.getElementById('logoutTop'),
+      logoutSettings: document.getElementById('logoutSettings'),
+      toast: document.getElementById('toast')
+    };
+
+    let user = null;
+    let profile = null;
+    let catalogue = [];            // [{ id, name, category }]
+    let savedInterests = new Set(); // ids currently stored
+    let draftInterests = new Set(); // ids being edited
+    let editingInterests = false;
+    let savedBio = '';
+    let toastTimer = null;
+
+    /* ---------------- helpers ---------------- */
+
+    function toast(message, isError = false) {
+      clearTimeout(toastTimer);
+      els.toast.textContent = message;
+      els.toast.classList.toggle('error', isError);
+      els.toast.classList.add('show');
+      toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2800);
+    }
+
+    function initialsOf(name) {
+      return (name || '')
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map(part => part[0] || '')
+        .join('')
+        .toUpperCase() || '·';
+    }
+
+    function cleanBio(value) {
+      if (!value) return '';
+      const trimmed = value.trim();
+      return trimmed === 'No Bio Set' ? '' : trimmed;
+    }
+
+    /* ---------------- render ---------------- */
+
+    function renderIdentity() {
+      const displayName = profile.nickname || profile.full_name || 'Your profile';
+
+      els.name.textContent = displayName;
+      els.handle.textContent = profile.full_name && profile.nickname
+        ? profile.full_name
+        : '';
+
+      // avatar
+      const hasPhoto = Boolean(profile.avatar_url);
+      els.avatarWrap.classList.toggle('empty', !hasPhoto);
+      els.photoWarning.hidden = hasPhoto;
+
+      if (hasPhoto) {
+        els.avatarImage.src = profile.avatar_url;
+        els.avatarImage.hidden = false;
+        els.avatarInitials.hidden = true;
+      } else {
+        els.avatarImage.hidden = true;
+        els.avatarInitials.hidden = false;
+        els.avatarInitials.textContent = initialsOf(displayName);
+      }
+
+      // meta
+      els.pills.innerHTML = '';
+      const meta = [
+        [profile.hall, 'accent'],
+        [profile.department, ''],
+        [profile.level ? `${profile.level} level` : '', ''],
+        [profile.age ? `${profile.age}` : '', '']
+      ].filter(([value]) => value);
+
+      meta.forEach(([value, kind], index) => {
+        const pill = document.createElement('span');
+        pill.className = 'pill' + (kind ? ' accent' : '');
+        pill.textContent = value;
+        pill.style.animation = `rise .5s cubic-bezier(.16,1,.3,1) both`;
+        pill.style.animationDelay = `${index * 60}ms`;
+        els.pills.appendChild(pill);
+      });
+
+      els.settingsEmail.textContent = user.email || '—';
+      renderStats();
+    }
+
+    function completeness() {
+      const fields = [
+        profile.full_name, profile.nickname, profile.age, profile.gender,
+        profile.hall, profile.department, profile.level, profile.avatar_url,
+        cleanBio(profile.bio), savedInterests.size >= MINIMUM_INTERESTS ? 'ok' : ''
+      ];
+      const filled = fields.filter(Boolean).length;
+      return Math.round((filled / fields.length) * 100);
+    }
+
+    function renderStats() {
+      const percent = completeness();
+      els.statInterests.textContent = savedInterests.size || '0';
+      els.statComplete.textContent = `${percent}%`;
+      els.strengthFill.style.width = `${percent}%`;
+    }
+
+    function renderBio() {
+      els.bioInput.value = cleanBio(profile.bio);
+      savedBio = els.bioInput.value;
+      updateBioCounter();
+    }
+
+    function updateBioCounter() {
+      const length = els.bioInput.value.length;
+      els.bioCounter.textContent = `${length} / ${BIO_LIMIT}`;
+      els.bioCounter.classList.toggle('at-limit', length >= BIO_LIMIT);
+      els.saveBio.disabled = els.bioInput.value.trim() === savedBio.trim();
+    }
+
+    function renderInterests() {
+      const source = editingInterests ? draftInterests : savedInterests;
+      els.interestGrid.innerHTML = '';
+
+      if (!source.size) {
+        els.interestGrid.innerHTML =
+          '<p class="chip-empty">No interests yet — pick at least ' + MINIMUM_INTERESTS + '.</p>';
+        return;
+      }
+
+      const chosen = catalogue
+        .filter(interest => source.has(interest.id))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      chosen.forEach(interest => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip selected';
+        chip.textContent = interest.name;
+        chip.disabled = !editingInterests;
+        chip.addEventListener('click', () => {
+          if (!editingInterests) return;
+          draftInterests.delete(interest.id);
+          renderInterests();
+          renderInterestActions();
+        });
+        els.interestGrid.appendChild(chip);
+      });
+
+      if (editingInterests) {
+        const available = catalogue
+          .filter(interest => !source.has(interest.id))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        available.forEach(interest => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'chip';
+          chip.textContent = interest.name;
+          chip.addEventListener('click', () => {
+            draftInterests.add(interest.id);
+            renderInterests();
+            renderInterestActions();
+          });
+          els.interestGrid.appendChild(chip);
+        });
+      }
+
+      els.interestGrid.classList.toggle('editing', editingInterests);
+    }
+
+    function renderInterestActions() {
+      els.interestActions.hidden = !editingInterests;
+      if (!editingInterests) return;
+
+      const count = draftInterests.size;
+      const ready = count >= MINIMUM_INTERESTS;
+      els.saveInterests.disabled = !ready;
+      els.interestNote.textContent = ready
+        ? `${count} selected — save when you're done.`
+        : `${count} selected. You need ${MINIMUM_INTERESTS - count} more.`;
+      els.interestNote.style.color = ready ? '' : '#a3331a';
+    }
+
+    /* ---------------- avatar ---------------- */
+
+    async function squareJpeg(file) {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      canvas.width = AVATAR_PX;
+      canvas.height = AVATAR_PX;
+      const ctx = canvas.getContext('2d');
+
+      const scale = Math.max(AVATAR_PX / bitmap.width, AVATAR_PX / bitmap.height);
+      const width = bitmap.width * scale;
+      const height = bitmap.height * scale;
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(bitmap, (AVATAR_PX - width) / 2, (AVATAR_PX - height) / 2, width, height);
+      bitmap.close?.();
+
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Could not read that image.')), 'image/jpeg', 0.9);
+      });
+    }
+
+    async function uploadAvatar(file) {
+      if (!file.type.startsWith('image/')) {
+        toast('That file is not an image.', true);
+        return;
+      }
+
+      if (file.size > 12 * 1024 * 1024) {
+        toast('That photo is over 12 MB. Pick a smaller one.', true);
+        return;
+      }
+
+      els.avatarWrap.classList.add('uploading');
+
+      try {
+        const blob = await squareJpeg(file);
+        const path = `${user.id}/avatar.jpg`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrl } = supabase.storage.from('avatars').getPublicUrl(path);
+        const avatarUrl = `${publicUrl.publicUrl}?v=${Date.now()}`;
+
+        const { error: saveError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: avatarUrl })
+          .eq('id', user.id);
+
+        if (saveError) throw saveError;
+
+        profile.avatar_url = avatarUrl;
+        renderIdentity();
+        toast('Photo updated. You can be discovered now.');
+      } catch (error) {
+        // The bucket is created by the avatar_storage migration. Say that
+        // plainly instead of leaking a storage error into the user's face.
+        const message = /bucket|not found/i.test(error.message || '')
+          ? 'Photo storage is not set up yet — run the avatar storage migration.'
+          : (error.message || 'Could not upload that photo.');
+        toast(message, true);
+      } finally {
+        els.avatarWrap.classList.remove('uploading');
+        els.avatarInput.value = '';
+      }
+    }
+
+    /* ---------------- data ---------------- */
+
+    async function loadAll() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      user = sessionData?.session?.user;
+
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const [profileResult, catalogueResult, mineResult, matchesResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('interests').select('id, name, category').order('name'),
+        supabase.from('user_interests').select('interest_id').eq('user_id', user.id),
+        supabase.from('matches')
+          .select('id', { count: 'exact', head: true })
+          .or(`user_one.eq.${user.id},user_two.eq.${user.id}`)
+      ]);
+
+      const failure = [profileResult, catalogueResult, mineResult, matchesResult].find(r => r.error);
+      if (failure) {
+        toast(failure.error.message, true);
+        return;
+      }
+
+      if (!profileResult.data) {
+        // Signed in but no row yet — finish onboarding instead of showing blanks.
+        window.location.href = 'signup-details.html';
+        return;
+      }
+
+      profile = profileResult.data;
+      catalogue = (catalogueResult.data || []).map(row => ({
+        id: Number(row.id),
+        name: row.name,
+        category: row.category
+      }));
+      savedInterests = new Set((mineResult.data || []).map(row => Number(row.interest_id)));
+      draftInterests = new Set(savedInterests);
+
+      els.statConnections.textContent = matchesResult.count ?? 0;
+
+      renderIdentity();
+      renderBio();
+      renderInterests();
+      els.handle.hidden = !els.handle.textContent;
+
+      if (window.location.hash === '#photo' && !profile.avatar_url) {
+        els.avatarButton.focus({ preventScroll: true });
+      }
+    }
+
+    /* ---------------- actions ---------------- */
+
+    els.avatarButton.addEventListener('click', () => els.avatarInput.click());
+    els.settingsPhoto.addEventListener('click', () => els.avatarInput.click());
+    els.avatarInput.addEventListener('change', event => {
+      const [file] = event.target.files || [];
+      if (file) uploadAvatar(file);
+    });
+
+    els.bioInput.addEventListener('input', updateBioCounter);
+
+    els.saveBio.addEventListener('click', async () => {
+      const value = els.bioInput.value.trim().slice(0, BIO_LIMIT);
+      els.saveBio.disabled = true;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ bio: value || null })
+        .eq('id', user.id);
+
+      if (error) {
+        toast(error.message, true);
+        els.saveBio.disabled = false;
+        return;
+      }
+
+      profile.bio = value || null;
+      savedBio = value;
+      renderStats();
+      updateBioCounter();
+      toast('Bio saved.');
+    });
+
+    els.toggleInterests.addEventListener('click', () => {
+      editingInterests = !editingInterests;
+
+      if (editingInterests) {
+        draftInterests = new Set(savedInterests);
+      } else {
+        draftInterests = new Set(savedInterests); // discard on cancel
+      }
+
+      els.toggleInterests.textContent = editingInterests ? 'Cancel' : 'Edit';
+      renderInterests();
+      renderInterestActions();
+    });
+
+    els.saveInterests.addEventListener('click', async () => {
+      if (draftInterests.size < MINIMUM_INTERESTS) return;
+
+      els.saveInterests.disabled = true;
+
+      const toAdd = [...draftInterests].filter(id => !savedInterests.has(id));
+      const toRemove = [...savedInterests].filter(id => !draftInterests.has(id));
+
+      try {
+        if (toRemove.length) {
+          const { error } = await supabase
+            .from('user_interests')
+            .delete()
+            .eq('user_id', user.id)
+            .in('interest_id', toRemove);
+          if (error) throw error;
+        }
+
+        if (toAdd.length) {
+          const { error } = await supabase
+            .from('user_interests')
+            .insert(toAdd.map(interestId => ({ user_id: user.id, interest_id: interestId })));
+          if (error) throw error;
+        }
+
+        savedInterests = new Set(draftInterests);
+        editingInterests = false;
+        els.toggleInterests.textContent = 'Edit';
+        renderInterests();
+        renderInterestActions();
+        renderStats();
+        toast('Interests updated.');
+      } catch (error) {
+        toast(error.message || 'Could not save your interests.', true);
+      } finally {
+        els.saveInterests.disabled = false;
+      }
+    });
+
+    async function logout() {
+      Promise.allSettled([els.logoutTop, els.logoutSettings].map(btn => {
+        btn.disabled = true;
+        btn.textContent = 'Signing out…';
+      })).catch(() => {});
+      await supabase.auth.signOut();
+      window.location.href = 'login.html';
+    }
+
+    els.logoutTop.addEventListener('click', logout);
+    els.logoutSettings.addEventListener('click', logout);
+
+    loadAll();
+
+    // Reflected elsewhere in the app: discover.html sends photo-less users here.
+    window.addEventListener('hashchange', () => {
+      if (window.location.hash === '#photo' && !profile?.avatar_url) {
+        els.avatarInput.click();
+      }
+    });
+  </script>
+</body>
+</html>
