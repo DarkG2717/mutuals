@@ -9,18 +9,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/profile.css">
+  <link rel="stylesheet" href="../assets/css/bottom-nav.css">
 </head>
 <body>
   <header class="app-bar">
     <a class="brand" href="../index.html">Mutuals<span>™</span></a>
 
-    <nav class="app-nav" aria-label="Main">
-      <a href="discover.html">Discover</a>
-      <a href="messages.html">Messages</a>
-      <a class="active" href="profile.html" aria-current="page">Profile</a>
-    </nav>
-
     <div class="bar-actions">
+      <a class="ghost-button" href="discover.html">Discover</a>
       <button type="button" class="ghost-button" id="logoutTop">Log out</button>
     </div>
   </header>
@@ -558,5 +554,6 @@
       }
     });
   </script>
+  <script src="../assets/js/bottom-nav.js" defer></script>
 </body>
 </html>

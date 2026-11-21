@@ -10,14 +10,12 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/discover.css">
   <link rel="stylesheet" href="../assets/css/polish.css">
+  <link rel="stylesheet" href="../assets/css/bottom-nav.css">
 </head>
 <body>
   <header class="discover-bar">
     <a class="brand" href="../index.html">Mutuals<span>™</span></a>
     <div class="bar-actions">
-      <a class="messages-link" href="messages.html" id="messagesLink">Messages</a>
-      <a class="profile-link" href="profile.html">Profile</a>
-      <a class="settings-link" href="profile.html#settings">Settings</a>
       <span id="viewerName"></span>
       <button type="button" id="logoutButton">Log out</button>
     </div>
@@ -70,6 +68,7 @@
   </main>
 
   <div class="match-toast" id="matchToast" role="status" aria-live="polite"></div>
+  <script src="../assets/js/bottom-nav.js" defer></script>
 
   <script type="module">
     import { supabase, supabaseConfigured } from '../assets/js/supabase.js';

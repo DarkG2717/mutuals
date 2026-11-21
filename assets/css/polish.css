@@ -2,6 +2,12 @@
    Additive only: nothing here changes layout, it changes how the product feels.
    Included last on every page so it can lift whatever that page already built. */
 
+/* Elements toggled with the `hidden` property must actually disappear. Author
+   display rules (grid/flex) otherwise win over the UA [hidden] rule. */
+[hidden] {
+  display: none !important;
+}
+
 :root {
   --aurora-a: rgba(233, 140, 112, .38);
   --aurora-b: rgba(244, 174, 66, .30);

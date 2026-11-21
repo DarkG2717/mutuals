@@ -1,6 +1,14 @@
 /* MUTUALS — profile. Same palette and type as the rest of the site,
    with the depth the rest of the app was missing. */
 
+/* An element toggled with the `hidden` property must actually disappear.
+   Several components here are display:grid/flex in CSS, which beats the UA
+   [hidden] rule — that is how the avatar initials circle kept painting on top
+   of the profile card after a photo was set. */
+[hidden] {
+  display: none !important;
+}
+
 :root {
   --cream: #fff0dc;
   --paper: #fffaf3;
