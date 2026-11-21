@@ -61,9 +61,7 @@
       </p>
 
       <div class="deck-actions" id="deckActions" hidden>
-        <button class="action-button undo" type="button" id="undoButton" disabled>Undo</button>
-        <button class="action-button pass" type="button" id="passButton">Pass</button>
-        <button class="action-button like" type="button" id="likeButton">Like</button>
+        <button class="action-button undo" type="button" id="undoButton" disabled>Undo last pass</button>
       </div>
     </section>
   </main>
@@ -97,8 +95,6 @@
       meta: document.getElementById('cardMeta'),
       interests: document.getElementById('cardInterests'),
       actions: document.getElementById('deckActions'),
-      pass: document.getElementById('passButton'),
-      like: document.getElementById('likeButton'),
       undo: document.getElementById('undoButton'),
       empty: document.getElementById('emptyState'),
       emptyTitle: document.getElementById('emptyTitle'),
@@ -376,12 +372,9 @@
       }
 
       // It's a match — the whole point of a like is the conversation, so go
-      // straight to it instead of leaving the user to find Messages themselves.
-      const name = card.profile.full_name || 'your match';
-      toast(`It's a match with ${name} ✳ Opening chat…`);
-      window.setTimeout(() => {
-        window.location.href = `messages.html?match=${encodeURIComponent(match.id)}`;
-      }, 1100);
+      // straight there. No delay: the redirect is the reward.
+      toast(`It's a match with ${card.profile.full_name || 'your match'} ✳`);
+      window.location.href = `messages.html?match=${encodeURIComponent(match.id)}`;
     }
 
     async function commitPending() {
@@ -398,8 +391,6 @@
       if (busy || locked || !deck.length) return;
       busy = true;
       locked = true;
-      els.pass.disabled = true;
-      els.like.disabled = true;
 
       const card = deck[0];
 
@@ -411,29 +402,38 @@
       els.card.style.transform = `translate3d(0, ${dir * 130}%, 0) rotate(${dir * 6}deg)`;
       els.card.style.opacity = '0';
 
-      // The previous decision becomes final the moment you move on.
+      // A held pass becomes final the moment the next decision happens.
       const previous = pending;
       pending = null;
-      if (previous) clearTimeout(previous.timer);
+      if (previous) {
+        clearTimeout(previous.timer);
+        persist(previous.card, previous.decision);
+      }
 
       deck.shift();
-      els.undo.disabled = false;
 
       window.setTimeout(() => {
         locked = false;
         showNext();
         busy = false;
-        els.pass.disabled = false;
-        els.like.disabled = false;
       }, 300);
 
+      if (decision === 'like') {
+        // A like is written immediately: it has to be, because a match is the
+        // reason to redirect, and a match cannot exist while the swipe is still
+        // sitting in an undo buffer. Consequence: likes are not undoable —
+        // only passes are, which is also the safer direction to be wrong in.
+        els.undo.disabled = true;
+        persist(card, 'like');
+        return;
+      }
+
+      els.undo.disabled = false;
       pending = {
         card,
         decision,
         timer: setTimeout(() => { commitPending(); }, UNDO_WINDOW_MS)
       };
-
-      if (previous) persist(previous.card, previous.decision);
     }
 
     function undo() {
@@ -559,8 +559,6 @@
       else if (e.key === 'Backspace' || e.key === 'ArrowLeft') { e.preventDefault(); undo(); }
     });
 
-    els.pass.addEventListener('click', () => decide('pass'));
-    els.like.addEventListener('click', () => decide('like'));
     els.undo.addEventListener('click', undo);
 
     // Never lose a decision to a closed tab: commit as the page goes away.

@@ -254,23 +254,43 @@
       completionMessage.textContent = "Saving your interests…";
 
       try {
-        const { error: clearError } = await supabase
+        // Diff against what is already stored instead of delete-all-then-insert.
+        // The old version cleared every row before writing the browser's list, so
+        // opening this page without a prefilled selection silently wiped the
+        // user's interests. A diff can only ever add or remove what changed.
+        const { data: existing, error: readError } = await supabase
           .from("user_interests")
-          .delete()
+          .select("interest_id")
           .eq("user_id", viewerId);
 
-        if (clearError) throw clearError;
+        if (readError) throw readError;
 
-        const rows = [...selected.keys()].map(interestId => ({
-          user_id: viewerId,
-          interest_id: interestId
-        }));
+        const storedIds = new Set((existing || []).map(row => row.interest_id));
+        const keepIds = new Set(selected.keys());
 
-        const { error: insertError } = await supabase
-          .from("user_interests")
-          .insert(rows);
+        const toRemove = [...storedIds].filter(id => !keepIds.has(id));
+        const toAdd = [...keepIds].filter(id => !storedIds.has(id));
 
-        if (insertError) throw insertError;
+        if (toRemove.length) {
+          const { error: removeError } = await supabase
+            .from("user_interests")
+            .delete()
+            .eq("user_id", viewerId)
+            .in("interest_id", toRemove);
+
+          if (removeError) throw removeError;
+        }
+
+        if (toAdd.length) {
+          const { error: insertError } = await supabase
+            .from("user_interests")
+            .insert(toAdd.map(interestId => ({
+              user_id: viewerId,
+              interest_id: interestId
+            })));
+
+          if (insertError) throw insertError;
+        }
 
         const { error: profileError } = await supabase
           .from("profiles")
@@ -323,18 +343,40 @@
         searchHint.textContent = `${interests.length} interests`;
       }
 
-      let stored = [];
-      try {
-        stored = JSON.parse(sessionStorage.getItem("mutualsSelectedInterests") || "[]");
-      } catch (error) {
-        stored = [];
+      // 1. What the user already saved. This is the source of truth for an
+      //    update — without it the page opens blank and looks like it lost data.
+      const { data: savedRows, error: savedError } = await supabase
+        .from("user_interests")
+        .select("interest_id")
+        .eq("user_id", user.id);
+
+      if (savedError) {
+        completionMessage.hidden = false;
+        completionMessage.textContent = savedError.message;
+        return;
       }
 
-      if (Array.isArray(stored)) {
-        stored.forEach(name => {
-          const match = interests.find(interest => interest.name === name);
-          if (match) selected.set(match.id, match.name);
-        });
+      (savedRows || []).forEach(row => {
+        const match = interests.find(interest => interest.id === row.interest_id);
+        if (match) selected.set(match.id, match.name);
+      });
+
+      // 2. Only fall back to the in-progress session draft when nothing has been
+      //    saved yet (first run through onboarding).
+      if (!selected.size) {
+        let stored = [];
+        try {
+          stored = JSON.parse(sessionStorage.getItem("mutualsSelectedInterests") || "[]");
+        } catch (error) {
+          stored = [];
+        }
+
+        if (Array.isArray(stored)) {
+          stored.forEach(name => {
+            const match = interests.find(interest => interest.name === name);
+            if (match) selected.set(match.id, match.name);
+          });
+        }
       }
 
       renderInterests();
