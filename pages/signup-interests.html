@@ -47,7 +47,7 @@
         <div>
           <p class="eyebrow">MAKE YOUR PICKS</p>
           <h2>What are you into?</h2>
-          <p class="panel-description">Choose as many as you like. You need at least 7.</p>
+          <p class="panel-description">Choose as many as you like. You need at least 5.</p>
         </div>
 
         <div class="selection-count" aria-live="polite">
@@ -77,7 +77,7 @@
       <section class="selected-section">
         <div class="selected-heading">
           <h3>Your picks</h3>
-          <span id="minimumStatus">7 needed to continue</span>
+          <span id="minimumStatus">5 needed to continue</span>
         </div>
         <div class="selected-list" id="selectedList">
           <p class="empty-selection">Your chosen interests will appear here.</p>
@@ -90,7 +90,7 @@
         </div>
         <div class="progress-caption">
           <span>YOUR INTERESTS</span>
-          <span id="progressText">0 of 7 minimum</span>
+          <span id="progressText">0 of 5 minimum</span>
         </div>
       </div>
 
@@ -111,7 +111,7 @@
   <script type="module">
     import { supabase } from "../assets/js/supabase.js";
 
-    const MINIMUM = 7;
+    const MINIMUM = 5;
 
     const ICONS = {
       "Gaming": "🎮", "Watching movies": "🎬", "Watching series": "📺", "Anime": "🌸",
