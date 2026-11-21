@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Your conversations on Mutuals.">
+  <title>Messages | Mutuals™</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/messages.css">
+</head>
+<body>
+  <header class="messages-bar">
+    <a class="brand" href="../index.html">Mutuals<span>™</span></a>
+    <div class="bar-actions">
+      <a href="discover.html">Discover</a>
+      <button type="button" id="logoutButton">Log out</button>
+    </div>
+  </header>
+
+  <main class="messages-main" id="messagesMain" data-view="list">
+    <section class="panel list-panel">
+      <div class="panel-head">
+        <span class="panel-title">Messages</span>
+        <span class="panel-sub" id="threadCount"></span>
+      </div>
+      <div class="thread-list" id="threadList">
+        <p class="empty-note" id="threadEmpty">Loading conversations…</p>
+      </div>
+    </section>
+
+    <section class="panel thread-panel">
+      <div id="threadHeader" hidden>
+        <div class="panel-head">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span class="avatar" id="threadAvatar"></span>
+            <div>
+              <span class="panel-title" id="threadName"></span>
+              <div class="panel-sub" id="threadSub"></div>
+            </div>
+          </div>
+          <a href="discover.html" class="panel-sub" id="backLink">Keep swiping</a>
+        </div>
+      </div>
+
+      <div class="placeholder" id="threadPlaceholder">
+        <h2>Pick a conversation</h2>
+        <p>Matches show up here as soon as you both say yes.</p>
+        <a href="discover.html">Back to Discover</a>
+      </div>
+
+      <div class="conversation" id="conversation" hidden></div>
+
+      <form class="composer" id="composer" hidden>
+        <textarea id="messageInput" rows="1" maxlength="2000" placeholder="Say something worth replying to…"></textarea>
+        <button class="send-button" type="submit" id="sendButton" disabled>Send</button>
+      </form>
+    </section>
+  </main>
+
+  <script type="module">
+    import { supabase, supabaseConfigured } from '../assets/js/supabase.js';
+
+    const els = {
+      main: document.getElementById('messagesMain'),
+      threadList: document.getElementById('threadList'),
+      threadEmpty: document.getElementById('threadEmpty'),
+      threadCount: document.getElementById('threadCount'),
+      threadHeader: document.getElementById('threadHeader'),
+      threadAvatar: document.getElementById('threadAvatar'),
+      threadName: document.getElementById('threadName'),
+      threadSub: document.getElementById('threadSub'),
+      placeholder: document.getElementById('threadPlaceholder'),
+      conversation: document.getElementById('conversation'),
+      composer: document.getElementById('composer'),
+      input: document.getElementById('messageInput'),
+      send: document.getElementById('sendButton'),
+      logout: document.getElementById('logoutButton')
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    let viewerId = null;
+    let activeMatch = params.get('match');
+    let activeThread = null;
+    let channel = null;
+    let threads = [];
+
+    function initials(name) {
+      return (name || '?')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part[0].toUpperCase())
+        .join('');
+    }
+
+    function makeAvatar(node, name, avatarUrl) {
+      node.innerHTML = '';
+      if (avatarUrl) {
+        const img = document.createElement('img');
+        img.src = avatarUrl;
+        img.alt = '';
+        node.appendChild(img);
+      } else {
+        node.textContent = initials(name);
+      }
+    }
+
+    function timeLabel(iso) {
+      if (!iso) return '';
+      const then = new Date(iso);
+      const now = new Date();
+      const sameDay = then.toDateString() === now.toDateString();
+      return sameDay
+        ? then.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : then.toLocaleDateString([], { day: 'numeric', month: 'short' });
+    }
+
+    function renderThreads() {
+      els.threadList.innerHTML = '';
+
+      if (!threads.length) {
+        els.threadEmpty.textContent =
+          'No conversations yet. Like someone in Discover — when they like you back, the chat opens here.';
+        els.threadList.appendChild(els.threadEmpty);
+        els.threadCount.textContent = '';
+        return;
+      }
+
+      els.threadCount.textContent = `${threads.length} ${threads.length === 1 ? 'chat' : 'chats'}`;
+
+      for (const thread of threads) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'thread';
+        button.setAttribute('aria-current', String(thread.match_id === activeMatch));
+
+        const avatar = document.createElement('span');
+        avatar.className = 'avatar';
+        makeAvatar(avatar, thread.other_name, thread.other_avatar);
+        button.appendChild(avatar);
+
+        const body = document.createElement('div');
+        body.className = 'thread-body';
+
+        const name = document.createElement('div');
+        name.className = 'thread-name';
+        name.textContent = thread.other_name || 'Match';
+        body.appendChild(name);
+
+        const last = document.createElement('div');
+        last.className = 'thread-last';
+        const mine = thread.last_sender === viewerId;
+        last.textContent = `${mine ? 'You: ' : ''}${thread.last_body || ''}`;
+        body.appendChild(last);
+
+        button.appendChild(body);
+
+        if (thread.unread > 0) {
+          const dot = document.createElement('span');
+          dot.className = 'unread-dot';
+          dot.textContent = String(thread.unread);
+          button.appendChild(dot);
+        }
+
+        button.addEventListener('click', () => openThread(thread.match_id));
+        els.threadList.appendChild(button);
+      }
+    }
+
+    async function loadThreads() {
+      const { data, error } = await supabase.rpc('get_my_threads');
+
+      if (error) {
+        els.threadEmpty.textContent = error.message;
+        els.threadList.appendChild(els.threadEmpty);
+        return;
+      }
+
+      threads = data || [];
+      renderThreads();
+    }
+
+    function renderMessage(message) {
+      const mine = message.sender_id === viewerId;
+
+      const bubble = document.createElement('div');
+      bubble.className = `bubble ${mine ? 'mine' : 'theirs'}`;
+      bubble.textContent = message.body;
+      els.conversation.appendChild(bubble);
+
+      const meta = document.createElement('div');
+      meta.className = 'bubble-meta';
+      meta.textContent = timeLabel(message.created_at);
+      els.conversation.appendChild(meta);
+    }
+
+    async function markRead(thread) {
+      const { data: last } = await supabase
+        .from('messages')
+        .select('seq')
+        .eq('match_id', thread.match_id)
+        .order('seq', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!last) return;
+
+      await supabase
+        .from('match_reads')
+        .upsert({
+          match_id: thread.match_id,
+          user_id: viewerId,
+          last_read_seq: last.seq,
+          last_read_at: new Date().toISOString()
+        }, { onConflict: 'match_id,user_id' });
+    }
+
+    function subscribe(matchId) {
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+
+      channel = supabase
+        .channel(`messages:${matchId}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `match_id=eq.${matchId}`
+        }, payload => {
+          if (!payload.new || payload.new.sender_id === viewerId) return;
+          renderMessage(payload.new);
+          els.conversation.scrollTop = els.conversation.scrollHeight;
+          if (activeThread) markRead(activeThread);
+          loadThreads();
+        })
+        .subscribe();
+    }
+
+    async function openThread(matchId) {
+      activeMatch = matchId;
+      activeThread = threads.find(t => t.match_id === matchId) || null;
+
+      els.placeholder.hidden = true;
+      els.conversation.hidden = false;
+      els.composer.hidden = false;
+      els.threadHeader.hidden = false;
+      els.main.dataset.view = 'thread';
+      els.conversation.innerHTML = '<p class="empty-note">Loading messages…</p>';
+
+      if (activeThread) {
+        els.threadName.textContent = activeThread.other_name || 'Match';
+        makeAvatar(els.threadAvatar, activeThread.other_name, activeThread.other_avatar);
+        els.threadSub.textContent = activeThread.last_at
+          ? `Matched · last message ${timeLabel(activeThread.last_at)}`
+          : 'You matched';
+      } else {
+        els.threadName.textContent = 'Conversation';
+        els.threadSub.textContent = '';
+      }
+
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, match_id, sender_id, body, seq, created_at')
+        .eq('match_id', matchId)
+        .order('seq', { ascending: true });
+
+      if (error) {
+        els.conversation.innerHTML = '';
+        const note = document.createElement('p');
+        note.className = 'empty-note';
+        note.textContent = error.message;
+        els.conversation.appendChild(note);
+        return;
+      }
+
+      els.conversation.innerHTML = '';
+      if (!data.length) {
+        const note = document.createElement('p');
+        note.className = 'empty-note';
+        note.textContent = 'You matched. Say something first — it only takes one line.';
+        els.conversation.appendChild(note);
+      } else {
+        data.forEach(renderMessage);
+      }
+
+      els.conversation.scrollTop = els.conversation.scrollHeight;
+
+      if (activeThread) {
+        await markRead(activeThread);
+        loadThreads();
+      }
+
+      subscribe(matchId);
+      els.input.focus();
+
+      // keep the URL shareable/reloadable without a full navigation
+      const url = new URL(window.location.href);
+      url.searchParams.set('match', matchId);
+      window.history.replaceState({}, '', url);
+    }
+
+    async function sendMessage() {
+      const body = els.input.value.trim();
+      if (!body || !activeMatch) return;
+
+      els.send.disabled = true;
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({ match_id: activeMatch, sender_id: viewerId, body })
+        .select('id, match_id, sender_id, body, seq, created_at')
+        .single();
+
+      els.send.disabled = false;
+
+      if (error) {
+        const note = document.createElement('p');
+        note.className = 'empty-note';
+        note.textContent = error.message;
+        els.conversation.appendChild(note);
+        return;
+      }
+
+      // the realtime echo is filtered out for our own inserts, so paint it here
+      const placeholder = els.conversation.querySelector('.empty-note');
+      if (placeholder) placeholder.remove();
+      renderMessage(data);
+      els.conversation.scrollTop = els.conversation.scrollHeight;
+      els.input.value = '';
+      els.input.style.height = 'auto';
+      loadThreads();
+    }
+
+    els.composer.addEventListener('submit', event => {
+      event.preventDefault();
+      sendMessage();
+    });
+
+    els.input.addEventListener('input', () => {
+      els.send.disabled = !els.input.value.trim();
+      els.input.style.height = 'auto';
+      els.input.style.height = `${Math.min(120, els.input.scrollHeight)}px`;
+    });
+
+    els.input.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    els.logout.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = '../index.html';
+    });
+
+    (async function start() {
+      if (!supabaseConfigured || !supabase) {
+        els.threadEmpty.textContent = 'Supabase credentials are missing.';
+        return;
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+
+      if (!user) {
+        els.threadEmpty.textContent = 'Log in to see your conversations.';
+        els.threadEmpty.innerHTML = 'Log in to see your conversations. <a href="login.html">Log in</a>';
+        return;
+      }
+
+      viewerId = user.id;
+      await loadThreads();
+
+      if (activeMatch) {
+        await openThread(activeMatch);
+      } else if (threads.length === 1) {
+        await openThread(threads[0].match_id);
+      }
+    })().catch(error => {
+      els.threadEmpty.textContent = error.message;
+    });
+  </script>
+</body>
+</html>

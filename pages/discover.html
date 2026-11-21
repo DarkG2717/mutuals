@@ -14,6 +14,7 @@
   <header class="discover-bar">
     <a class="brand" href="../index.html">Mutuals<span>™</span></a>
     <div class="bar-actions">
+      <a class="messages-link" href="messages.html" id="messagesLink">Messages</a>
       <span id="viewerName"></span>
       <button type="button" id="logoutButton">Log out</button>
     </div>
@@ -25,13 +26,19 @@
 
       <article class="profile-card" id="profileCard" hidden>
         <div class="card-visual">
-          <img class="card-photo" id="cardPhoto" alt="" hidden>
+          <img class="card-photo" id="cardPhoto" alt="" hidden draggable="false">
           <span class="card-initials" id="cardInitials"></span>
           <span class="match-badge" id="matchBadge"></span>
+
+          <div class="veil veil-like" id="veilLike" aria-hidden="true"><span>Like</span></div>
+          <div class="veil veil-pass" id="veilPass" aria-hidden="true"><span>Pass</span></div>
         </div>
 
         <div class="card-body">
-          <h1 class="card-name" id="cardName"></h1>
+          <h1 class="card-name">
+            <span id="cardName"></span>
+            <span class="card-age" id="cardAge" hidden></span>
+          </h1>
           <p class="card-nickname" id="cardNickname"></p>
 
           <div class="card-meta" id="cardMeta"></div>
@@ -48,6 +55,10 @@
         </p>
         <a href="signup-interests.html" id="emptyLink">Update your interests</a>
       </div>
+
+      <p class="gesture-hint" id="gestureHint">
+        Swipe <strong>down</strong> to like · swipe <strong>up</strong> to pass
+      </p>
 
       <div class="deck-actions" id="deckActions" hidden>
         <button class="action-button undo" type="button" id="undoButton" disabled>Undo</button>
@@ -69,6 +80,10 @@
     } from '../assets/js/matching.js';
 
     const DECK_SIZE = 20;
+    const THRESHOLD = 110;        // px of travel that commits a decision
+    const VELOCITY_COMMIT = 0.55; // px/ms flick commits a decision
+    const WHEEL_COMMIT = 130;     // accumulated wheel delta that commits
+    const WHEEL_RESET = 220;      // ms of quiet before the wheel accumulator resets
 
     const els = {
       status: document.getElementById('deckStatus'),
@@ -77,6 +92,7 @@
       initials: document.getElementById('cardInitials'),
       badge: document.getElementById('matchBadge'),
       name: document.getElementById('cardName'),
+      age: document.getElementById('cardAge'),
       nickname: document.getElementById('cardNickname'),
       meta: document.getElementById('cardMeta'),
       interests: document.getElementById('cardInterests'),
@@ -88,8 +104,12 @@
       emptyTitle: document.getElementById('emptyTitle'),
       emptyCopy: document.getElementById('emptyCopy'),
       emptyLink: document.getElementById('emptyLink'),
+      hint: document.getElementById('gestureHint'),
       toast: document.getElementById('matchToast'),
+      veilLike: document.getElementById('veilLike'),
+      veilPass: document.getElementById('veilPass'),
       viewerName: document.getElementById('viewerName'),
+      messagesLink: document.getElementById('messagesLink'),
       logout: document.getElementById('logoutButton')
     };
 
@@ -97,6 +117,7 @@
     let viewerId = null;
     let viewerInterests = new Set();
     let busy = false;
+    let locked = false; // true while a card is animating out
 
     // A decision is held locally for a short window before it is written.
     // That is what makes Undo possible: there is no row to delete, and a match
@@ -111,6 +132,7 @@
     function showEmpty(title, copy, linkLabel) {
       els.card.hidden = true;
       els.actions.hidden = true;
+      els.hint.hidden = true;
       els.empty.hidden = false;
       els.emptyTitle.textContent = title;
       els.emptyCopy.textContent = copy;
@@ -137,14 +159,35 @@
         .join('');
     }
 
+    function clamp(n, lo, hi) {
+      return n < lo ? lo : n > hi ? hi : n;
+    }
+
     function render(card) {
       const profile = card.profile;
 
       els.empty.hidden = true;
       els.card.hidden = false;
       els.actions.hidden = false;
+      els.hint.hidden = false;
+      els.card.style.transform = '';
+      els.card.style.opacity = '';
+      els.card.classList.remove('dragging', 'settling');
+      els.veilLike.style.opacity = '0';
+      els.veilPass.style.opacity = '0';
 
       els.name.textContent = profile.full_name || 'Someone new';
+
+      // age is optional on a profile (Google sign-in creates none), so the
+      // comma+age only appears when there is an age to show.
+      if (Number.isInteger(profile.age) && profile.age > 0) {
+        els.age.textContent = profile.age;
+        els.age.hidden = false;
+      } else {
+        els.age.textContent = '';
+        els.age.hidden = true;
+      }
+
       els.nickname.textContent = profile.nickname ? `“${profile.nickname}”` : '';
       els.nickname.hidden = !profile.nickname;
 
@@ -162,7 +205,11 @@
       }
 
       els.meta.innerHTML = '';
-      [profile.hall, profile.department, profile.level && `${profile.level} level`]
+      [
+        profile.level ? `${profile.level} level` : null,
+        profile.hall,
+        profile.department
+      ]
         .filter(Boolean)
         .forEach(value => {
           const chip = document.createElement('span');
@@ -185,11 +232,14 @@
         pill.textContent = name;
         els.interests.appendChild(pill);
       });
+
+      wireDrag();
     }
 
     function showNext() {
       if (!deck.length) {
         setStatus('');
+        els.card.style.transform = '';
         showEmpty(
           'No one new right now',
           "You've seen everyone available in your hall and faculty. Check back soon — new students join every week.",
@@ -224,7 +274,7 @@
       const [profilesResult, poolResult, statsResult, swipesResult, blocksResult, ownResult] =
         await Promise.all([
           supabase.from('profiles').select(
-            'id, full_name, nickname, hall, department, level, avatar_url, onboarding_completed'
+            'id, full_name, nickname, age, hall, department, level, avatar_url, onboarding_completed'
           ),
           supabase.rpc('get_interest_pool'),
           supabase.from('interest_stats').select('idf, interests(name)'),
@@ -320,9 +370,18 @@
         .or(`and(user_one.eq.${viewerId},user_two.eq.${card.profile.id}),and(user_one.eq.${card.profile.id},user_two.eq.${viewerId})`)
         .maybeSingle();
 
-      if (match) {
-        toast(`It's a match with ${card.profile.full_name || 'someone'} ✳`);
+      if (!match) {
+        toast('Like sent');
+        return;
       }
+
+      // It's a match — the whole point of a like is the conversation, so go
+      // straight to it instead of leaving the user to find Messages themselves.
+      const name = card.profile.full_name || 'your match';
+      toast(`It's a match with ${name} ✳ Opening chat…`);
+      window.setTimeout(() => {
+        window.location.href = `messages.html?match=${encodeURIComponent(match.id)}`;
+      }, 1100);
     }
 
     async function commitPending() {
@@ -334,30 +393,47 @@
       await persist(card, decision);
     }
 
-    async function decide(decision) {
-      if (busy || !deck.length) return;
+    /* ---------- decision flow ---------- */
+    function decide(decision) {
+      if (busy || locked || !deck.length) return;
       busy = true;
+      locked = true;
       els.pass.disabled = true;
       els.like.disabled = true;
 
       const card = deck[0];
 
+      // fling the card off on the gesture axis, then advance
+      const dir = decision === 'like' ? 1 : -1;
+      const veil = decision === 'like' ? els.veilLike : els.veilPass;
+      veil.style.opacity = '1';
+      els.card.classList.add('settling');
+      els.card.style.transform = `translate3d(0, ${dir * 130}%, 0) rotate(${dir * 6}deg)`;
+      els.card.style.opacity = '0';
+
       // The previous decision becomes final the moment you move on.
-      await commitPending();
+      const previous = pending;
+      pending = null;
+      if (previous) clearTimeout(previous.timer);
 
       deck.shift();
-      showNext();
+      els.undo.disabled = false;
+
+      window.setTimeout(() => {
+        locked = false;
+        showNext();
+        busy = false;
+        els.pass.disabled = false;
+        els.like.disabled = false;
+      }, 300);
 
       pending = {
         card,
         decision,
         timer: setTimeout(() => { commitPending(); }, UNDO_WINDOW_MS)
       };
-      els.undo.disabled = false;
 
-      els.pass.disabled = false;
-      els.like.disabled = false;
-      busy = false;
+      if (previous) persist(previous.card, previous.decision);
     }
 
     function undo() {
@@ -367,9 +443,121 @@
       pending = null;
       els.undo.disabled = true;
       deck.unshift(card);
-      showNext();
+      if (deck.length === 1) showNext();
+      else {
+        showNext();
+      }
       toast(`Brought back ${card.profile.full_name || 'that profile'}`);
     }
+
+    /* ---------- vertical drag gesture: down = like, up = pass ---------- */
+    function paint(dy, dx) {
+      const y = clamp(dy, -520, 520);
+      const x = clamp(dx * 0.18, -70, 70);
+      const rot = clamp(dx * 0.02, -5, 5) + clamp(y * -0.012, -3.5, 3.5);
+      els.card.style.transform = `translate3d(${x.toFixed(1)}px, ${y}px, 0) rotate(${rot.toFixed(2)}deg)`;
+
+      const down = Math.max(0, y) / THRESHOLD;
+      const up = Math.max(0, -y) / THRESHOLD;
+      els.veilLike.style.opacity = String(clamp(down, 0, 1));
+      els.veilPass.style.opacity = String(clamp(up, 0, 1));
+    }
+
+    function wireDrag() {
+      const card = els.card;
+      let startY = 0;
+      let startX = 0;
+      let lastY = 0;
+      let lastT = 0;
+      let vy = 0;
+      let dy = 0;
+      let dx = 0;
+      let dragging = false;
+
+      card.onpointerdown = e => {
+        if (locked || busy || e.button === 2) return;
+        dragging = true;
+        startY = lastY = e.clientY;
+        startX = e.clientX;
+        lastT = performance.now();
+        dy = dx = vy = 0;
+        card.classList.add('dragging');
+        card.classList.remove('settling');
+        try { card.setPointerCapture(e.pointerId); } catch (_) {}
+      };
+
+      card.onpointermove = e => {
+        if (!dragging) return;
+        const now = performance.now();
+        dy = e.clientY - startY;
+        dx = e.clientX - startX;
+
+        const dt = Math.max(1, now - lastT);
+        vy = (e.clientY - lastY) / dt;
+        lastY = e.clientY;
+        lastT = now;
+
+        paint(dy, dx);
+      };
+
+      function end(e) {
+        if (!dragging) return;
+        dragging = false;
+        card.classList.remove('dragging');
+
+        const flick = Math.abs(vy) > VELOCITY_COMMIT;
+        const commit = Math.abs(dy) > THRESHOLD || (flick && Math.abs(dy) > 46);
+
+        if (commit) {
+          decide(dy > 0 ? 'like' : 'pass');
+        } else {
+          card.classList.add('settling');
+          paint(0, 0);
+          els.veilLike.style.opacity = '0';
+          els.veilPass.style.opacity = '0';
+          setTimeout(() => card.classList.remove('settling'), 600);
+        }
+
+        dy = dx = 0;
+        if (e && e.pointerId != null && card.hasPointerCapture && card.hasPointerCapture(e.pointerId)) {
+          try { card.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+      }
+
+      card.onpointerup = end;
+      card.onpointercancel = end;
+    }
+
+    /* ---------- wheel: trackpad / mouse scroll is the same gesture ---------- */
+    let wheelAcc = 0;
+    let wheelTimer = null;
+
+    window.addEventListener('wheel', e => {
+      if (els.card.hidden || locked || busy) return;
+      e.preventDefault();
+
+      wheelAcc += e.deltaY;
+      const preview = clamp(wheelAcc * 0.55, -THRESHOLD * 0.95, THRESHOLD * 0.95);
+      paint(preview, 0);
+
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(() => { wheelAcc = 0; }, WHEEL_RESET);
+
+      if (wheelAcc >= WHEEL_COMMIT) {
+        wheelAcc = 0;
+        decide('like');
+      } else if (wheelAcc <= -WHEEL_COMMIT) {
+        wheelAcc = 0;
+        decide('pass');
+      }
+    }, { passive: false });
+
+    /* ---------- keyboard ---------- */
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); decide('like'); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); decide('pass'); }
+      else if (e.key === 'Backspace' || e.key === 'ArrowLeft') { e.preventDefault(); undo(); }
+    });
 
     els.pass.addEventListener('click', () => decide('pass'));
     els.like.addEventListener('click', () => decide('like'));

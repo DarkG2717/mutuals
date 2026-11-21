@@ -98,6 +98,19 @@ body {
   overflow: hidden;
   box-shadow: 0 24px 60px -32px rgba(55, 24, 15, 0.45);
   animation: card-in 0.32s ease both;
+  /* the deck is driven by a vertical drag: down = like, up = pass */
+  touch-action: pan-x;
+  will-change: transform;
+  cursor: grab;
+}
+
+.profile-card.dragging {
+  cursor: grabbing;
+  animation: none;
+}
+
+.profile-card.settling {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
 }
 
 @keyframes card-in {
@@ -156,6 +169,17 @@ body {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.card-age {
+  font-family: "DM Sans", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .card-nickname {
@@ -204,6 +228,69 @@ body {
   color: var(--muted);
   width: 100%;
   margin-bottom: 2px;
+}
+
+.gesture-hint {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 16px;
+}
+
+.gesture-hint strong {
+  color: var(--brown);
+  font-weight: 600;
+}
+
+/* decision veils: opacity is driven by drag distance so intent is visible
+   before the card is released */
+.veil {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s linear;
+  font-family: "Playfair Display", serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding-top: 22px;
+}
+
+.veil span {
+  border: 3px solid currentColor;
+  border-radius: 10px;
+  padding: 6px 18px;
+  transform: rotate(-6deg);
+  background: rgba(255, 250, 243, 0.72);
+}
+
+.veil-like {
+  color: var(--orange);
+  align-items: flex-start;
+}
+
+.veil-pass {
+  color: var(--muted);
+  align-items: flex-end;
+  padding-bottom: 26px;
+  padding-top: 0;
+}
+
+.messages-link {
+  color: var(--brown);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.messages-link:hover {
+  color: var(--orange);
+  border-color: var(--orange);
 }
 
 .deck-actions {
